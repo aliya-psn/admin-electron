@@ -1,0 +1,67 @@
+/** Element Plus 默认主题样式 */
+
+/** 默认主题下的对话框样式 */
+html.theme-default .el-dialog {
+  border-radius: 12px;
+  overflow: hidden;
+
+  .el-dialog__header {
+    padding: 20px 20px 10px;
+    background: var(--el-bg-color);
+  }
+
+  .el-dialog__body {
+    padding: 12px;
+    color: var(--el-text-color-regular);
+    line-height: 1.4;
+    background: var(--el-bg-color);
+  }
+
+  .el-dialog__footer {
+    padding: 0 20px 20px;
+    text-align: right;
+    box-sizing: border-box;
+    background: var(--el-bg-color);
+  }
+}
+
+/** 无主题类名时的默认样式（兜底） */
+html:not([class*="theme-"]) .el-dialog,
+html:not(.theme-default):not(.theme-client):not(.ui-theme-dark) .el-dialog {
+  .el-dialog__header {
+    padding: 20px 20px 10px;
+  }
+
+  .el-dialog__body {
+    padding: 20px 20px;
+    color: var(--el-text-color-regular);
+    line-height: 1.4;
+  }
+
+  .el-dialog__footer {
+    padding: 10px 20px 20px;
+    text-align: right;
+    box-sizing: border-box;
+  }
+}
+
+/** 默认主题下的下拉选择器样式 */
+.el-select-dropdown {
+  border-radius: 4px;
+  border: 1px solid var(--el-border-color);
+  box-shadow: var(--el-box-shadow-light);
+
+  .el-select-dropdown__item {
+    transition: background-color 0.15s ease;
+
+    &:hover {
+      background-color: var(--el-fill-color-light);
+    }
+
+    &.selected {
+      background-color: var(--el-color-primary-light-9);
+      color: var(--el-color-primary);
+      font-weight: 500;
+    }
+  }
+}

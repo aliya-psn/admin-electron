@@ -1,0 +1,212 @@
+/** Element Plus 暗色主题样式 */
+
+/** 暗色主题变量 */
+html.ui-theme-dark {
+    --el-color-primary: #60a5fa;
+    --el-color-primary-light-3: #93c5fd4d;
+    --el-color-primary-light-5: #93c5fd80;
+    --el-color-primary-light-7: #93c5fdb3;
+    --el-color-primary-light-8: #93c5fdc9;
+    --el-color-primary-light-9: #93c5fde6;
+    --el-color-primary-dark-2: #2563eb;
+    
+    --el-bg-color-page: #1e1e1e;
+    --el-bg-color: #2d2d2d;
+    --el-bg-color-overlay: #3e3e3e;
+    --el-text-color-primary: #ffffff;
+    --el-text-color-regular: #d1d5db;
+    --el-border-color: #484848;
+    
+    --el-font-family: 'Segoe UI', 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  
+  /** 暗色主题下的对话框样式 */
+  html.ui-theme-dark .el-dialog {
+    background: var(--el-bg-color);
+    border: 1px solid var(--el-border-color);
+    
+    .el-dialog__header {
+      padding: 20px 20px 10px;
+      background: var(--el-bg-color);
+      border-bottom: 1px solid var(--el-border-color);
+      
+      .el-dialog__title {
+        color: var(--el-text-color-primary);
+      }
+      
+      .el-dialog__headerbtn {
+        .el-dialog__close {
+          color: var(--el-text-color-regular);
+          
+          &:hover {
+            color: var(--el-color-danger);
+          }
+        }
+      }
+    }
+    
+    .el-dialog__body {
+      padding: 20px 20px;
+      background: var(--el-bg-color);
+      color: var(--el-text-color-regular);
+      line-height: 1.4;
+    }
+    
+    .el-dialog__footer {
+      padding: 10px 20px 20px;
+      background: var(--el-bg-color);
+      border-top: 1px solid var(--el-border-color);
+      text-align: right;
+      box-sizing: border-box;
+    }
+  }
+  
+  /** 暗色主题下的按钮样式 */
+  html.ui-theme-dark .el-button {
+    &.el-button--primary {
+      background: var(--el-color-primary);
+      border-color: var(--el-color-primary);
+      color: #ffffff;
+      
+      &:hover {
+        background: var(--el-color-primary-dark-2);
+        border-color: var(--el-color-primary-dark-2);
+      }
+    }
+    
+    &.el-button--default {
+      background: var(--el-bg-color-overlay);
+      border-color: var(--el-border-color);
+      color: var(--el-text-color-primary);
+      
+      &:hover {
+        background: var(--el-fill-color-light);
+        border-color: var(--el-color-primary);
+        color: var(--el-color-primary);
+      }
+    }
+  }
+  
+  /** 暗色主题下的输入框样式 */
+  html.ui-theme-dark .el-input {
+    .el-input__wrapper {
+      background: var(--el-bg-color-overlay);
+      border-color: var(--el-border-color);
+      
+      &:hover {
+        border-color: var(--el-color-primary);
+      }
+      
+      &.is-focus {
+        border-color: var(--el-color-primary);
+        box-shadow: 0 0 0 2px var(--el-color-primary-light-7);
+      }
+    }
+    
+    .el-input__inner {
+      color: var(--el-text-color-primary);
+      
+      &::placeholder {
+        color: var(--el-text-color-placeholder);
+      }
+    }
+  }
+  
+  /** 暗色主题下的卡片样式 */
+  html.ui-theme-dark .el-card {
+    background: var(--el-bg-color);
+    border-color: var(--el-border-color);
+    
+    .el-card__header {
+      background: var(--el-bg-color-overlay);
+      border-bottom-color: var(--el-border-color);
+      color: var(--el-text-color-primary);
+    }
+    
+    .el-card__body {
+      color: var(--el-text-color-regular);
+    }
+  }
+  
+  /** 暗色主题下的菜单样式 */
+  html.ui-theme-dark .el-menu {
+    background: var(--el-bg-color);
+    
+    .el-menu-item {
+      color: var(--el-text-color-regular);
+      
+      &:hover {
+        background: var(--el-bg-color-overlay);
+        color: var(--el-color-primary);
+      }
+      
+      &.is-active {
+        background: var(--el-color-primary);
+        color: #ffffff;
+      }
+    }
+    
+    .el-sub-menu__title {
+      color: var(--el-text-color-regular);
+      
+      &:hover {
+        background: var(--el-bg-color-overlay);
+        color: var(--el-color-primary);
+      }
+    }
+  }
+  
+  /** 暗色主题下的下拉选择器样式 */
+  html.ui-theme-dark .el-select {
+    .el-input__wrapper {
+      background: var(--el-bg-color-overlay);
+      border-color: var(--el-border-color);
+      
+      &:hover {
+        border-color: var(--el-color-primary);
+      }
+    }
+  }
+  
+  html.ui-theme-dark .el-select-dropdown {
+    background: var(--el-bg-color);
+    border-color: var(--el-border-color);
+    
+    .el-select-dropdown__item {
+      color: var(--el-text-color-regular);
+      
+      &:hover {
+        background: var(--el-bg-color-overlay);
+      }
+      
+      &.selected {
+        background: var(--el-color-primary-light-9);
+        color: var(--el-color-primary);
+      }
+    }
+  }
+  
+  /** 暗色主题下的消息提示样式 */
+  html.ui-theme-dark .el-message {
+    background: var(--el-bg-color-overlay);
+    border-color: var(--el-border-color);
+    color: var(--el-text-color-primary);
+    
+    &.el-message--success {
+      background: rgba(103, 194, 58, 0.1);
+      border-color: var(--el-color-success);
+      color: var(--el-color-success);
+    }
+    
+    &.el-message--warning {
+      background: rgba(230, 162, 60, 0.1);
+      border-color: var(--el-color-warning);
+      color: var(--el-color-warning);
+    }
+    
+    &.el-message--error {
+      background: rgba(245, 108, 108, 0.1);
+      border-color: var(--el-color-danger);
+      color: var(--el-color-danger);
+    }
+  }

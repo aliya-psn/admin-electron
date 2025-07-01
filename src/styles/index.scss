@@ -3,6 +3,10 @@
 // Element Plus
 @import './element-plus.css';
 @import './element-plus.scss';
+// 主题样式文件
+@import './themes/theme-default.scss';
+@import './themes/theme-client.scss';
+@import './themes/theme-dark.scss';
 // Mixins
 @import './mixins.scss';
 // View Transition

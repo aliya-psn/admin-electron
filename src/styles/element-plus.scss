@@ -1,4 +1,13 @@
-/** 自定义 Element Plus 样式 */
+/** Element Plus 通用样式定制 */
+
+/* Element Plus 通用的小尺寸按钮样式 */
+.el-button--small {
+  font-size: 14px;
+  height: 28px;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
 // 分页
 .el-pagination {
   // 参考 Bootstrap 的响应式设计 WIDTH = 768
@@ -13,40 +22,57 @@
   }
 }
 
-/* 重置 el-table 的默认样式 */
+/* Element Plus 表格通用样式 */
 .el-table {
-  font-size: 14px; /* 设置表格字体大小 */
-  color: #333; /* 设置表格文字颜色 */
+  font-size: 14px;
+  color: var(--el-text-color-primary);
 }
 
-/* 重置表头样式 */
 .el-table .el-table__header th {
-  background-color: var(--el-light-bg-color); /* 表头背景颜色 */
-  color: #333; /* 表头文字颜色 */
-  font-weight: bold; /* 表头字体加粗 */
-  padding: 12px 0; /* 表头内边距 */
+  background-color: var(--el-light-bg-color);
+  color: var(--el-text-color-primary);
+  font-weight: bold;
+  padding: 12px 0;
 }
 
 .el-table th.el-table__cell.is-leaf {
-  background-color: var(--el-light-bg-color); /* 表头背景颜色 */
+  background-color: var(--el-light-bg-color);
 }
 
-/* 重置单元格样式 */
 .el-table .el-table__cell {
-  padding: 12px 0; /* 单元格内边距 */
+  padding: 12px 0;
 }
 
-.el-button--small {
-  font-size: 14px;
-  height: 28px;
-  padding: 2px 7px;
-  border-radius: 4px;
-}
-
+/* 全局 dialog 样式重置 */
 .el-dialog {
-  padding: 25px;
+  padding: 0; /* 移除全局内边距，让各主题自己控制 */
 }
+
+
 
 .el-scrollbar {
   background: var(--el-bg-color);
+  
+  /** 滚动条客户端化样式 */
+  .el-scrollbar__thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+    transition: background 0.2s ease;
+    
+    &:hover {
+      background: #909090;
+    }
+  }
+  
+  .el-scrollbar__bar {
+    &.is-vertical {
+      width: 8px;
+      right: 2px;
+    }
+    
+    &.is-horizontal {
+      height: 8px;
+      bottom: 2px;
+    }
+  }
 }

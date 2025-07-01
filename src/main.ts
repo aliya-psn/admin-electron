@@ -15,8 +15,13 @@ import 'normalize.css';
 import 'element-plus/dist/index.css';
 import 'element-plus/theme-chalk/dark/css-vars.css';
 import '@/styles/index.scss';
+// 初始化主题系统
+import { initThemeSystem } from '@/utils/env-theme';
 
 const app = createApp(App);
+
+// 初始化主题系统（在应用启动时立即执行）
+initThemeSystem();
 
 // 加载插件
 loadPlugins(app);
