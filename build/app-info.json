@@ -1,0 +1,23 @@
+{
+  "name": "Swhy-FE",
+  "description": "Vue3、TypeScript、Element Plus、Pinia、Electron 桌面应用",
+  "version": "1.0.0",
+  "author": "Swhy",
+  "homepage": "https://github.com/your-username/admin-fe-electron",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/admin-fe-electron.git"
+  },
+  "keywords": [
+    "vue",
+    "vue3",
+    "electron",
+    "desktop",
+    "admin",
+    "typescript"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/your-username/admin-fe-electron/issues"
+  }
+} 
