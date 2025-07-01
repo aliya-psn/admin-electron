@@ -35,6 +35,7 @@ const { isTop } = useLayoutMode();
   position: relative;
   width: 100%;
   height: var(--v3-header-height);
+  background-color: var(--v3-body-bg-color);
 
   a {
     display: flex;

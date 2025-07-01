@@ -3,9 +3,7 @@ import { removeConfigLayout } from '@/utils/local-storage';
 import { ElMessage } from 'element-plus';
 
 // 判断是否为 Electron 环境
-export const isElectron = () => {
-  return typeof window !== 'undefined' && navigator.userAgent.toLowerCase().includes('electron');
-};
+export const isElectron = typeof window !== 'undefined' && navigator.userAgent.toLowerCase().includes('electron');
 
 /** 格式化时间 */
 export const formatDateTime = (time: string | number | Date) => {

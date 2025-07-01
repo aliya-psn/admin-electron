@@ -5,7 +5,7 @@
     top: 0;
     right: 0;
     bottom: 0;
-    background: #fff;
+    background: var(--v3-body-bg-color);
     z-index: 9999;
     display: flex;
     align-items: center;
