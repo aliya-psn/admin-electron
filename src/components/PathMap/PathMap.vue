@@ -9,12 +9,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, onBeforeUnmount } from 'vue';
+import { ref, onMounted, watch, onBeforeUnmount, computed } from 'vue';
 import { Network, DataSet, Node, Edge } from 'vis-network/standalone';
 
 const props = defineProps<{
   nodes: Node[];
   edges: Edge[];
+  height?: string | number;
 }>();
 const emit = defineEmits(['node-click']);
 
@@ -24,30 +25,39 @@ let nodesDS: DataSet<Node>;
 let edgesDS: DataSet<Edge>;
 
 const options = {
-  autoResize: true,
-  height: '400px',
-  width: '100%',
+  autoResize: true, // 自动适应容器大小
+  height: props.height ? (typeof props.height === 'number' ? props.height + 'px' : props.height) : '400px', // 画布高度
+  width: '100%', // 画布宽度
   nodes: {
-    shape: 'image',
-    size: 40,
-    font: { size: 14 },
-    borderWidth: 2
+    shape: 'image', // 节点形状为图片
+    size: 40, // 节点大小
+    font: { size: 14 }, // 节点文字大小
+    borderWidth: 2 // 节点边框宽度
   },
   edges: {
-    arrows: 'to',
-    color: { color: '#444', highlight: '#409eff' },
-    width: 2,
-    smooth: true,
-    dashes: false
+    arrows: {
+      to: { enabled: false, scaleFactor: 2 } // 不显示箭头，scaleFactor 仅作保留
+    },
+    color: { color: '#444', highlight: '#409eff' }, // 线条颜色及高亮色
+    width: 2, // 线条宽度
+    smooth: true, // 线条平滑
+    dashes: false // 线条为实线
   },
   physics: {
-    enabled: true,
-    stabilization: false
+    enabled: true, // 启用物理引擎
+    solver: 'repulsion', // 使用 repulsion（斥力）算法，节点间距更大
+    stabilization: false, // 不做稳定动画，直接渲染
+    repulsion: {
+      nodeDistance: 150, // 节点间最小距离，适中，越大越稀疏
+      centralGravity: 0.2, // 吸向中心的重力系数，略大，可改为 0.1
+      springLength: 150, // 弹簧长度，适中，影响线的长度
+      springConstant: 0.05 // 弹簧系数，略紧凑，越小越松散
+    }
   },
   interaction: {
-    navigationButtons: false,
-    zoomView: true,
-    dragView: true
+    navigationButtons: false, // 不显示导航按钮
+    zoomView: true, // 允许缩放
+    dragView: true // 允许拖动画布
   }
 };
 
@@ -57,6 +67,10 @@ const zoomIn = () => {
 const zoomOut = () => {
   if (network) network.moveTo({ scale: (network.getScale() || 1) / 1.2 });
 };
+
+const pathMapHeight = computed(() =>
+  props.height ? (typeof props.height === 'number' ? props.height + 'px' : props.height) : '400px'
+);
 
 onMounted(() => {
   nodesDS = new DataSet(props.nodes);
@@ -101,9 +115,12 @@ onBeforeUnmount(() => {
 }
 .path-map-container {
   width: 100%;
-  height: 400px;
+  height: v-bind(pathMapHeight);
   border: 1px solid #eee;
   background: #fafbfc;
   border-radius: 6px;
+}
+.path-map-container img {
+  pointer-events: none;
 }
 </style>

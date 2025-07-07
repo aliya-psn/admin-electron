@@ -104,8 +104,9 @@
         </template>
         <div class="map-container">
           <div class="map-view">
-            <PathMap :nodes="nodes" :edges="edges" @node-click="onNodeClick" />
+            <PathMap :nodes="nodes" :edges="edges" :height="480" @node-click="onNodeClick" />
           </div>
+
           <div class="node-detail" v-if="selectedNode">
             <div class="detail-header">
               <span>节点信息</span>
@@ -197,13 +198,7 @@
 
     <el-dialog v-model="showExecuteLog" title="执行日志" width="70%">
       <div class="log-content">
-        <el-input
-          v-model="logContent"
-          type="textarea"
-          :rows="15"
-          readonly
-          placeholder="执行日志内容..."
-        />
+        <el-input v-model="logContent" type="textarea" :rows="15" readonly placeholder="执行日志内容..." />
       </div>
       <template #footer>
         <el-button @click="downloadLog">下载日志</el-button>
@@ -275,24 +270,44 @@ type NodeType = {
   visitCount?: number;
 };
 
-const nodes = ref<NodeType[]>(
-  Array.from({ length: 21 }, (_, i) => ({
-    id: i + 1,
-    label: `pages/Index`,
-    image: `/images/file_${(i % 11) + 1}.png`,
-    type: '页面',
-    visitCount: Math.floor(Math.random() * 20) + 1
-  }))
-);
+// const nodes = ref<NodeType[]>(
+//   Array.from({ length: 21 }, (_, i) => ({
+//     id: i + 1,
+//     label: `pages/Index`,
+//     image: `/images/file_${(i % 11) + 1}.png`,
+//     type: '页面',
+//     visitCount: Math.floor(Math.random() * 20) + 1
+//   }))
+// );
 
-const edges = ref(
-  Array.from({ length: 20 }, (_, i) => ({
-    from: i + 1,
-    to: i + 2,
-    label: `跳转${i + 1}`,
-    color: { color: '#409eff' }
-  }))
-);
+// const edges = ref(
+//   Array.from({ length: 20 }, (_, i) => ({
+//     from: i + 1,
+//     to: i + 2,
+//     label: `跳转${i + 1}`,
+//     color: { color: '#409eff' }
+//   }))
+// );
+
+const nodes = ref<NodeType[]>([
+  { id: 1, label: '入口A', image: '/images/file_1.png', type: '入口' },
+  { id: 2, label: '页面2', image: '/images/file_2.png', type: '页面' },
+  { id: 3, label: '页面3', image: '/images/file_3.png', type: '页面' },
+  { id: 4, label: '出口A', image: '/images/file_4.png', type: '出口' },
+  { id: 5, label: '入口B', image: '/images/file_5.png', type: '入口' },
+  { id: 6, label: '页面6', image: '/images/file_6.png', type: '页面' },
+  { id: 7, label: '出口B', image: '/images/file_7.png', type: '出口' }
+]);
+
+const edges = ref([
+  { from: 1, to: 2, label: 'A到2', color: { color: '#409eff' } },
+  { from: 2, to: 3, label: '2到3', color: { color: '#409eff' } },
+  { from: 3, to: 4, label: '3到出口A', color: { color: '#409eff' } },
+  { from: 5, to: 6, label: 'B到6', color: { color: '#67c23a' } },
+  { from: 6, to: 3, label: '6到3', color: { color: '#e6a23c' } }, // 汇合到3
+  { from: 6, to: 7, label: '6到出口7', color: { color: '#67c23a' } },
+  { from: 7, to: 6, label: '7到出口6', color: { color: '#67c23a' } }
+]);
 
 const selectedNode = ref<NodeType | null>(null);
 const showNodeDetail = ref(false);
@@ -389,12 +404,12 @@ const currentIssue = ref<any>(null);
 
 function getTypeTagType(type: string): 'danger' | 'warning' | 'info' | 'success' | 'primary' {
   const typeMap: { [key: string]: 'danger' | 'warning' | 'info' | 'success' | 'primary' } = {
-    '应用崩溃故障': 'danger',
-    '应用冻屏故障': 'warning',
-    '进程崩溃': 'danger',
-    '句柄泄漏故障': 'info',
-    '线程泄漏故障': 'info',
-    '内存泄漏故障': 'warning'
+    应用崩溃故障: 'danger',
+    应用冻屏故障: 'warning',
+    进程崩溃: 'danger',
+    句柄泄漏故障: 'info',
+    线程泄漏故障: 'info',
+    内存泄漏故障: 'warning'
   };
   return typeMap[type] || 'info';
 }
@@ -414,14 +429,16 @@ function showIssueSummary(row: any) {
 
 function getErrorMessage(subType: string) {
   const messages: { [key: string]: string } = {
-    'JS_ERROR': 'TypeError: Cannot read property \'data\' of undefined\n    at pages/Index.js:45:12\n    at onClick (pages/Index.js:38:5)',
-    'APP_FREEZE': '应用主线程被阻塞超过5秒，可能由于主线程执行耗时操作导致',
-    'CPP_CRASH': 'SIGSEGV(信号11)段错误，访问了无效的内存地址',
-    'HANDLE_LEAK': '检测到句柄泄漏，当前进程句柄数量: 1024，超出正常范围',
-    'THREAD_LEAK': '检测到线程泄漏，活跃线程数: 156，部分线程未正确释放',
-    'MEMORY_LEAK': '检测到内存泄漏，内存使用量持续增长，当前占用: 512MB',
-    'NULL_POINTER': 'NullPointerException: null对象引用\n    at com.huawei.testmall.api.ApiManager.getData(ApiManager.java:89)',
-    'UI_BLOCK': 'UI线程阻塞超过3秒，可能由于网络请求或数据库操作在主线程执行'
+    JS_ERROR:
+      "TypeError: Cannot read property 'data' of undefined\n    at pages/Index.js:45:12\n    at onClick (pages/Index.js:38:5)",
+    APP_FREEZE: '应用主线程被阻塞超过5秒，可能由于主线程执行耗时操作导致',
+    CPP_CRASH: 'SIGSEGV(信号11)段错误，访问了无效的内存地址',
+    HANDLE_LEAK: '检测到句柄泄漏，当前进程句柄数量: 1024，超出正常范围',
+    THREAD_LEAK: '检测到线程泄漏，活跃线程数: 156，部分线程未正确释放',
+    MEMORY_LEAK: '检测到内存泄漏，内存使用量持续增长，当前占用: 512MB',
+    NULL_POINTER:
+      'NullPointerException: null对象引用\n    at com.huawei.testmall.api.ApiManager.getData(ApiManager.java:89)',
+    UI_BLOCK: 'UI线程阻塞超过3秒，可能由于网络请求或数据库操作在主线程执行'
   };
   return messages[subType] || '暂无错误详情';
 }
@@ -473,7 +490,10 @@ function goBack() {
 }
 
 // 通用卡片样式
-.task-card, .overview-card, .map-card, .issues-card {
+.task-card,
+.overview-card,
+.map-card,
+.issues-card {
   :deep(.el-card__header) {
     padding: 16px 20px;
     background-color: #f8f9fa;
@@ -493,7 +513,7 @@ function goBack() {
       .map-stats {
         display: flex;
         gap: 8px;
-        
+
         :deep(.el-tag) {
           font-size: 12px;
         }
@@ -631,7 +651,7 @@ function goBack() {
 
   .path-info {
     flex: 1;
-    
+
     .path-label {
       font-weight: 600;
       color: #303133;
@@ -647,78 +667,75 @@ function goBack() {
 
 // 地图卡片
 .map-card {
-  grid-column: span 2;
+  grid-column: span 3;
 }
 
 .map-container {
-  position: relative;
-  min-height: 400px;
-}
+  min-height: 480px;
+  display: flex;
+  gap: 20px;
 
-.map-view {
-  width: 100%;
-  height: 400px;
-  border: 1px solid #e4e7ed;
-  border-radius: 6px;
-  background: #fafafa;
-}
-
-.node-detail {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  width: 280px;
-  background: white;
-  border: 1px solid #e4e7ed;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  overflow: hidden;
-
-  .detail-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 16px;
-    background: #f8f9fa;
-    font-weight: 600;
-    color: #303133;
-    border-bottom: 1px solid #e4e7ed;
+  .map-view {
+    flex: 3;
+    width: 100%;
+    height: 100%;
+    border: 1px solid #e4e7ed;
+    border-radius: 6px;
+    background: #fafafa;
   }
 
-  .detail-body {
-    padding: 16px;
+  .node-detail {
+    flex: 1;
+    background: white;
+    border: 1px solid #e4e7ed;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 
-    .detail-row {
+    .detail-header {
       display: flex;
       justify-content: space-between;
-      margin-bottom: 12px;
-      font-size: 14px;
+      align-items: center;
+      padding: 12px 16px;
+      background: #f8f9fa;
+      font-weight: 600;
+      color: #303133;
+      border-bottom: 1px solid #e4e7ed;
+    }
 
-      &:last-child {
-        margin-bottom: 0;
-      }
+    .detail-body {
+      padding: 16px;
 
-      .label {
-        color: #606266;
-        font-weight: 500;
-        min-width: 60px;
-      }
+      .detail-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 12px;
+        font-size: 14px;
 
-      .value {
-        color: #303133;
-        font-weight: 600;
-        text-align: right;
+        &:last-child {
+          margin-bottom: 0;
+        }
+
+        .label {
+          color: #606266;
+        }
+
+        .value {
+          color: #303133;
+          font-weight: 600;
+          text-align: right;
+        }
       }
     }
-  }
 
-  .detail-image {
-    padding: 0 16px 16px;
-
-    img {
-      width: 100%;
-      border-radius: 4px;
-      border: 1px solid #e4e7ed;
+    .detail-image {
+      padding: 0 16px 16px;
+      max-width: 300px;
+      margin: 0 auto;
+      img {
+        width: 100%;
+        border-radius: 4px;
+        border: 1px solid #e4e7ed;
+      }
     }
   }
 }
@@ -773,7 +790,9 @@ function goBack() {
   }
 }
 
-.task-detail-content, .log-content, .issue-summary {
+.task-detail-content,
+.log-content,
+.issue-summary {
   .error-message {
     background: #f5f5f5;
     padding: 12px;
@@ -797,7 +816,10 @@ function goBack() {
     gap: 16px;
   }
 
-  .task-card, .overview-card, .map-card, .issues-card {
+  .task-card,
+  .overview-card,
+  .map-card,
+  .issues-card {
     grid-column: span 1;
 
     :deep(.el-card__body) {
@@ -850,11 +872,5 @@ function goBack() {
   .map-view {
     height: 300px;
   }
-
-  .node-detail {
-    position: static;
-    width: 100%;
-    margin-top: 16px;
-  }
 }
-</style> 
+</style>

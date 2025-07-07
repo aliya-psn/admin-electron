@@ -21,33 +21,51 @@
           </el-form-item>
           <el-form-item label="选择应用" prop="app">
             <div class="config-select-wrapper">
-              <el-select v-model="form.app" placeholder="请选择应用">
+              <el-select v-model="form.app" placeholder="请选择应用" style="width: 360px">
                 <el-option v-for="item in appList" :key="item.id" :label="item.name" :value="item.id" />
               </el-select>
               <el-button type="primary" text @click="installApp">安装新的应用</el-button>
             </div>
           </el-form-item>
           <el-divider>应用探索测试</el-divider>
-          <el-form-item label="测试时长" prop="duration" style="max-width: 100%;">
+          <el-form-item label="测试时长" prop="duration" style="max-width: 100%">
             <el-radio-group v-model="form.duration">
-              <el-radio v-for="item in durationOptions" :key="item.value" :label="item.value">{{ item.label }}</el-radio>
+              <el-radio v-for="item in durationOptions" :key="item.value" :label="item.value">{{
+                item.label
+              }}</el-radio>
               <el-radio label="custom">自定义</el-radio>
             </el-radio-group>
-            <el-input v-if="form.duration === 'custom'" v-model.number="form.customDuration" type="number" min="1"
-              max="1440" style="width: 100px; margin-left: 15px" suffix="分钟" />
+            <el-input
+              v-if="form.duration === 'custom'"
+              v-model.number="form.customDuration"
+              type="number"
+              min="1"
+              max="1440"
+              style="width: 100px; margin-left: 15px"
+              suffix="分钟"
+            />
           </el-form-item>
           <el-form-item label="模型选择" prop="model">
             <el-select v-model="form.model" placeholder="请选择模型">
               <el-option v-for="item in modelList" :key="item.id" :label="item.name" :value="item.id" />
             </el-select>
           </el-form-item>
-          <el-form-item label="截屏间隔" prop="interval" style="max-width: 100%;">
+          <el-form-item label="截屏间隔" prop="interval" style="max-width: 100%">
             <el-radio-group v-model="form.interval">
-              <el-radio v-for="item in intervalOptions" :key="item.value" :label="item.value">{{ item.label }}</el-radio>
+              <el-radio v-for="item in intervalOptions" :key="item.value" :label="item.value">{{
+                item.label
+              }}</el-radio>
               <el-radio label="custom">自定义</el-radio>
             </el-radio-group>
-            <el-input v-if="form.interval === 'custom'" v-model.number="form.customInterval" type="number" min="1"
-              max="60" style="width: 100px; margin-left: 15px" suffix="秒" />
+            <el-input
+              v-if="form.interval === 'custom'"
+              v-model.number="form.customInterval"
+              type="number"
+              min="1"
+              max="60"
+              style="width: 100px; margin-left: 15px"
+              suffix="秒"
+            />
           </el-form-item>
           <el-form-item label="归档包名" prop="archiveName">
             <el-input v-model="form.archiveName" maxlength="100" />
@@ -63,7 +81,7 @@
         </el-form>
       </el-card>
     </div>
-    
+
     <div class="side-content">
       <div class="info-cards">
         <el-card class="info-card" v-if="selectedApp">
@@ -327,7 +345,7 @@ function submitForm() {
     grid-template-columns: 1fr;
     padding: 16px;
   }
-  
+
   .config-select-wrapper {
     flex-direction: column;
     align-items: stretch;

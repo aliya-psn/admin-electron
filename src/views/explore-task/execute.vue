@@ -18,7 +18,7 @@
 
         <div class="progress-actions">
           <el-button type="danger" @click="stopTask">停止任务</el-button>
-          <el-button type="primary" @click="goReport">查看报告</el-button>
+          <el-button type="success" @click="goReport">查看报告</el-button>
         </div>
       </div>
       <div class="main-panels">
@@ -29,17 +29,20 @@
         </el-card>
         <el-card class="panel device-img">
           <template #header>设备镜像</template>
-          <div class="mock-img">[Mock 设备截图]</div>
+          <div class="show-img">
+            <img src="/images/file_1.png" alt="设备截图" />
+          </div>
         </el-card>
         <el-card class="panel semantic">
-          <template #header>
-            语义分析
-            <el-switch v-model="semanticOn" active-text="开启" inactive-text="暂停" style="margin-left: 8px" />
-          </template>
-          <div class="mock-img">[Mock 语义分析截图]</div>
-          <div class="semantic-list">
-            <div v-for="item in semanticList" :key="item.id" :class="{ active: item.active }">
-              {{ item.id }}. {{ item.text }}
+          <template #header> 语义分析 </template>
+          <div class="semantic-content-row">
+            <div class="show-img semantic-img">
+              <img src="/images/file_8.png" alt="设备截图" />
+            </div>
+            <div class="semantic-list">
+              <div v-for="item in semanticList" :key="item.id" :class="{ active: item.active }">
+                {{ item.id }}. {{ item.text }}
+              </div>
             </div>
           </div>
         </el-card>
@@ -47,7 +50,7 @@
       <div class="bottom-bar">
         <div class="log-title">
           <span> 日志级别：</span>
-          <el-select v-model="logLevel" size="small" style="width: 160px">
+          <el-select v-model="logLevel" style="width: 160px">
             <el-option label="Info" value="Info" />
             <el-option label="Warn" value="Warn" />
             <el-option label="Error" value="Error" />
@@ -101,7 +104,6 @@ import { useRouter } from 'vue-router';
 import PathMap from '@/components/PathMap/PathMap.vue';
 
 const progress = ref({ current: 25, total: 30, percent: 80 });
-const semanticOn = ref(true);
 const semanticList = ref([
   { id: 7, text: '内容列表区', active: true },
   { id: 1, text: '内容列表区中的项', active: false },
@@ -149,28 +151,34 @@ const logs = ref([
 ]);
 
 // mock 路径地图数据
+// 多入口多出口示例
+// 入口节点: 1, 5；出口节点: 4, 7
+// 分支：1->2->3->4，5->6->3->4，6->7
+
 type NodeType = {
   id: number | string;
   label: string;
   image?: string;
   type?: string;
 };
-const nodes = ref<NodeType[]>(
-  Array.from({ length: 11 }, (_, i) => ({
-    id: i + 1,
-    label: `页面${i + 1}`,
-    image: `/images/file_${i + 1}.png`,
-    type: '页面'
-  }))
-);
-const edges = ref(
-  Array.from({ length: 10 }, (_, i) => ({
-    from: i + 1,
-    to: i + 2,
-    label: `跳转${i + 1}`,
-    color: { color: '#409eff' }
-  }))
-);
+const nodes = ref<NodeType[]>([
+  { id: 1, label: '入口A', image: '/images/file_1.png', type: '入口' },
+  { id: 2, label: '页面2', image: '/images/file_2.png', type: '页面' },
+  { id: 3, label: '页面3', image: '/images/file_3.png', type: '页面' },
+  { id: 4, label: '出口A', image: '/images/file_4.png', type: '出口' },
+  { id: 5, label: '入口B', image: '/images/file_5.png', type: '入口' },
+  { id: 6, label: '页面6', image: '/images/file_6.png', type: '页面' },
+  { id: 7, label: '出口B', image: '/images/file_7.png', type: '出口' }
+]);
+
+const edges = ref([
+  { from: 1, to: 2, label: 'A到2', color: { color: '#409eff' } },
+  { from: 2, to: 3, label: '2到3', color: { color: '#409eff' } },
+  { from: 3, to: 4, label: '3到出口A', color: { color: '#409eff' } },
+  { from: 5, to: 6, label: 'B到6', color: { color: '#67c23a' } },
+  { from: 6, to: 3, label: '6到3', color: { color: '#e6a23c' } }, // 汇合到3
+  { from: 6, to: 7, label: '6到出口B', color: { color: '#67c23a' } }
+]);
 
 const showNodeDetail = ref(false);
 const currentNode = ref<NodeType | null>(null);
@@ -245,92 +253,132 @@ function goReport() {
 }
 
 .main-panels {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
   gap: 20px;
 
   .panel {
     min-height: 360px;
     transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+  }
 
-    &:hover {
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-      transform: translateY(-2px);
-    }
+  .panel.path-map {
+    flex: 3;
+  }
+  .panel.device-img {
+    flex: 2;
+  }
+  .panel.semantic {
+    flex: 3;
+  }
 
-    :deep(.el-card__header) {
-      padding: 16px 20px;
-      background-color: #f8f9fa;
-      border-bottom: 1px solid #e4e7ed;
-      font-weight: 600;
-      color: #303133;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
+  .panel:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+  }
 
-    :deep(.el-card__body) {
-      padding: 20px;
-      height: calc(100% - 58px);
-      display: flex;
-      flex-direction: column;
-    }
+  .panel :deep(.el-card__header) {
+    padding: 16px 20px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e4e7ed;
+    font-weight: 600;
+    color: #303133;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
 
-    &.path-map {
-      :deep(.el-card__body) {
-        > div:last-child {
-          margin-top: auto;
-          padding-top: 12px;
-          border-top: 1px solid #f0f2f5;
-          font-size: 14px;
-          color: #606266;
-        }
-      }
-    }
+  .panel :deep(.el-card__body) {
+    padding: 20px;
+    height: calc(100% - 58px);
+    display: flex;
+    flex-direction: column;
+  }
 
-    &.semantic {
-      .semantic-list {
-        margin-top: 12px;
-        flex: 1;
-        overflow-y: auto;
+  .panel.path-map :deep(.el-card__body) > div:last-child {
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid #f0f2f5;
+    font-size: 14px;
+    color: #606266;
+  }
 
-        > div {
-          padding: 8px 12px;
-          margin-bottom: 4px;
-          border-radius: 4px;
-          font-size: 14px;
-          color: #606266;
-          transition: all 0.2s ease;
-
-          &.active {
-            color: #409eff;
-            font-weight: 600;
-            background-color: #f0f8ff;
-            border-left: 3px solid #409eff;
-          }
-
-          &:hover {
-            background-color: #f5f7fa;
-          }
-        }
-      }
-    }
+  .panel.semantic .semantic-content-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .panel.semantic .semantic-img {
+    max-width: 300px;
+    border-radius: 8px;
+    border: 1px dashed #ddd;
+    background: linear-gradient(135deg, #f5f5f5 0%, #eeeeee 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .panel.semantic .semantic-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 8px;
+    display: block;
+  }
+  .panel.semantic .semantic-list {
+    flex: 1;
+    max-height: 200px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .panel.semantic .semantic-list > div {
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    color: #606266;
+    background: #fff;
+    border-left: 3px solid transparent;
+    word-break: break-all;
+    transition:
+      background 0.2s,
+      color 0.2s,
+      border-left 0.2s;
+  }
+  .panel.semantic .semantic-list > div.active {
+    color: #409eff;
+    font-weight: 600;
+    background-color: #f0f8ff;
+    border-left: 3px solid #409eff;
+  }
+  .panel.semantic .semantic-list > div:hover {
+    background-color: #f5f7fa;
   }
 }
 
-.mock-img {
+.show-img {
   background: linear-gradient(135deg, #f5f5f5 0%, #eeeeee 100%);
-  height: 200px;
+  width: 100%;
+  max-width: 320px;
+  margin: 0 auto 12px auto;
+  border-radius: 12px;
+  border: 1px dashed #ddd;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #999;
-  border-radius: 6px;
-  border: 1px dashed #ddd;
-  margin-bottom: 12px;
-  font-size: 14px;
+  position: relative;
+  overflow: hidden;
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
 }
-
 .bottom-bar {
   padding: 20px;
   background: #fff;
