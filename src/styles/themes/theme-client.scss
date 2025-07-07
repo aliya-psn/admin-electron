@@ -306,16 +306,12 @@ html.theme-client {
       }
 
       .el-dialog__headerbtn {
-        top: 16px;
-        right: 16px;
+        top: 6px;
+        right: 10px;
 
         .el-dialog__close {
           color: #909399;
           font-size: 18px;
-
-          &:hover {
-            color: #f56c6c;
-          }
         }
       }
     }

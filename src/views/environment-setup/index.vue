@@ -69,15 +69,15 @@
               <div class="description">{{ item.description }}</div>
             </div>
             <div class="status-actions">
-                              <el-button
-                  size="small"
-                  :type="item.status === 'success' ? 'success' : 'primary'"
-                  @click="handleActionButtonClick(item)"
-                  :loading="item.checking"
-                  :disabled="item.checking"
-                >
-                  {{ getActionButtonText(item) }}
-                </el-button>
+              <el-button
+                size="small"
+                :type="item.status === 'success' ? 'success' : 'primary'"
+                @click="handleActionButtonClick(item)"
+                :loading="item.checking"
+                :disabled="item.checking"
+              >
+                {{ getActionButtonText(item) }}
+              </el-button>
               <el-button
                 size="small"
                 @click="checkEnvironment(item)"
@@ -107,7 +107,11 @@
                   <el-input readonly :value="item.checkCommand" class="command-input">
                     <template #append>
                       <el-button @click="copyCommand(item.checkCommand)">复制</el-button>
-                      <el-button type="success" @click="executeCommand(item.checkCommand)" :loading="item.checkCommand === executingCommand">
+                      <el-button
+                        type="success"
+                        @click="executeCommand(item.checkCommand)"
+                        :loading="item.checkCommand === executingCommand"
+                      >
                         检测
                       </el-button>
                     </template>
@@ -170,67 +174,62 @@
           </div>
         </div>
       </el-card>
-            </div>
-
-        <!-- 安装进度对话框 -->
-        <el-dialog v-model="installDialog.visible" :title="installDialog.title" width="600px" :close-on-click-modal="false">
-            <div class="install-progress">
-                <div class="progress-header">
-                    <div class="progress-info">
-                        <span>安装进度：{{ installDialog.currentStep }} / {{ installDialog.totalSteps }}</span>
-                        <el-progress 
-                            :percentage="Math.round((installDialog.currentStep / installDialog.totalSteps) * 100)"
-                            :status="installDialog.currentStep === installDialog.totalSteps ? 'success' : undefined"
-                        />
-                    </div>
-                    <div class="current-command" v-if="installDialog.currentCommand">
-                        <strong>当前执行：</strong>
-                        <code>{{ installDialog.currentCommand }}</code>
-                    </div>
-                </div>
-                
-                <div class="progress-logs">
-                    <h4>执行日志：</h4>
-                    <div class="log-container">
-                        <div 
-                            v-for="(log, index) in installDialog.logs" 
-                            :key="index" 
-                            class="log-item"
-                            :class="`log-${log.status}`"
-                        >
-                            <div class="log-command">
-                                <el-icon v-if="log.status === 'running'" class="loading-icon">
-                                    <Loading />
-                                </el-icon>
-                                <el-icon v-else-if="log.status === 'success'" class="success-icon">
-                                    <SuccessFilled />
-                                </el-icon>
-                                <el-icon v-else-if="log.status === 'error'" class="error-icon">
-                                    <CloseBold />
-                                </el-icon>
-                                <code>{{ log.command }}</code>
-                            </div>
-                            <div v-if="log.output" class="log-output">
-                                <pre>{{ log.output }}</pre>
-                            </div>
-                            <div v-if="log.error" class="log-error">
-                                <pre>{{ log.error }}</pre>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <template #footer>
-                <el-button 
-                    @click="closeInstallDialog"
-                    :type="installDialog.currentStep === installDialog.totalSteps ? 'primary' : 'default'"
-                >
-                    {{ installDialog.currentStep === installDialog.totalSteps ? '完成' : '最小化' }}
-                </el-button>
-            </template>
-        </el-dialog>
     </div>
+
+    <!-- 安装进度对话框 -->
+    <el-dialog v-model="installDialog.visible" :title="installDialog.title" width="600px" :close-on-click-modal="false">
+      <div class="install-progress">
+        <div class="progress-header">
+          <div class="progress-info">
+            <span>安装进度：{{ installDialog.currentStep }} / {{ installDialog.totalSteps }}</span>
+            <el-progress
+              :percentage="Math.round((installDialog.currentStep / installDialog.totalSteps) * 100)"
+              :status="installDialog.currentStep === installDialog.totalSteps ? 'success' : undefined"
+            />
+          </div>
+          <div class="current-command" v-if="installDialog.currentCommand">
+            <strong>当前执行：</strong>
+            <code>{{ installDialog.currentCommand }}</code>
+          </div>
+        </div>
+
+        <div class="progress-logs">
+          <h4>执行日志：</h4>
+          <div class="log-container">
+            <div v-for="(log, index) in installDialog.logs" :key="index" class="log-item" :class="`log-${log.status}`">
+              <div class="log-command">
+                <el-icon v-if="log.status === 'running'" class="loading-icon">
+                  <Loading />
+                </el-icon>
+                <el-icon v-else-if="log.status === 'success'" class="success-icon">
+                  <SuccessFilled />
+                </el-icon>
+                <el-icon v-else-if="log.status === 'error'" class="error-icon">
+                  <CloseBold />
+                </el-icon>
+                <code>{{ log.command }}</code>
+              </div>
+              <div v-if="log.output" class="log-output">
+                <pre>{{ log.output }}</pre>
+              </div>
+              <div v-if="log.error" class="log-error">
+                <pre>{{ log.error }}</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <el-button
+          @click="closeInstallDialog"
+          :type="installDialog.currentStep === installDialog.totalSteps ? 'primary' : 'default'"
+        >
+          {{ installDialog.currentStep === installDialog.totalSteps ? '完成' : '最小化' }}
+        </el-button>
+      </template>
+    </el-dialog>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -486,7 +485,7 @@ function reopenInstallDialog(item: EnvironmentItem) {
 // 关闭安装进度对话框
 function closeInstallDialog() {
   installDialog.value.visible = false;
-  
+
   // 如果安装已完成，清理状态
   if (installDialog.value.currentStep === installDialog.value.totalSteps) {
     setTimeout(() => {
@@ -600,11 +599,11 @@ async function installEnvironment(item: EnvironmentItem) {
   try {
     for (let i = 0; i < item.installCommands.length; i++) {
       const command = item.installCommands[i];
-      
+
       // 更新当前命令和步骤
       installDialog.value.currentCommand = command;
       installDialog.value.currentStep = i;
-      
+
       // 添加日志条目
       const logEntry = {
         command,
@@ -637,17 +636,16 @@ async function installEnvironment(item: EnvironmentItem) {
     // 所有命令执行完成
     installDialog.value.currentStep = item.installCommands.length;
     installDialog.value.currentCommand = '';
-    
+
     ElMessage.success(`${item.name} 安装完成`);
 
     // 重新检测
     setTimeout(() => {
       checkEnvironment(item);
     }, 1000);
-
   } catch (error) {
     ElMessage.error(`${item.name} 安装失败: ${error}`);
-    
+
     // 安装失败时，显示失败状态但不自动关闭对话框
     installDialog.value.currentCommand = '安装失败';
   } finally {
@@ -1149,7 +1147,8 @@ onMounted(async () => {
         }
       }
 
-      .log-output, .log-error {
+      .log-output,
+      .log-error {
         margin-top: 8px;
 
         pre {
