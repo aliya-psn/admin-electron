@@ -53,8 +53,8 @@
       <el-card class="overview-card">
         <template #header>
           <div class="card-header">
-            <el-icon><DataAnalysis /></el-icon>
             <span>数据概览</span>
+            <el-icon><DataAnalysis /></el-icon>
           </div>
         </template>
         <div class="overview-content">
@@ -177,35 +177,33 @@
       </el-card>
     </div>
 
-    <!-- 对话框保持不变 -->
+    <!-- 任务详情对话框 -->
     <el-dialog v-model="showTaskDetail" title="任务详情" width="60%">
-      <div class="task-detail-content">
-        <el-descriptions :column="2" border>
-          <el-descriptions-item label="任务名称">Task-0731-081941</el-descriptions-item>
-          <el-descriptions-item label="设备信息">22M0****133g(HUAWEI Mate X5)</el-descriptions-item>
-          <el-descriptions-item label="应用包名">com.huawei.testmall</el-descriptions-item>
-          <el-descriptions-item label="应用版本">1.0.0</el-descriptions-item>
-          <el-descriptions-item label="测试时长">0.5小时</el-descriptions-item>
-          <el-descriptions-item label="截屏间隔">2秒</el-descriptions-item>
-          <el-descriptions-item label="模型选择">无模型</el-descriptions-item>
-          <el-descriptions-item label="归档包名">testmall_1.0.0_Task-graph.zip</el-descriptions-item>
-        </el-descriptions>
-      </div>
+      <el-descriptions :column="2" border>
+        <el-descriptions-item label="任务名称">Task-0731-081941</el-descriptions-item>
+        <el-descriptions-item label="设备信息">22M0****133g(HUAWEI Mate X5)</el-descriptions-item>
+        <el-descriptions-item label="应用包名">com.huawei.testmall</el-descriptions-item>
+        <el-descriptions-item label="应用版本">1.0.0</el-descriptions-item>
+        <el-descriptions-item label="测试时长">0.5小时</el-descriptions-item>
+        <el-descriptions-item label="截屏间隔">2秒</el-descriptions-item>
+        <el-descriptions-item label="模型选择">无模型</el-descriptions-item>
+        <el-descriptions-item label="归档包名">testmall_1.0.0_Task-graph.zip</el-descriptions-item>
+      </el-descriptions>
       <template #footer>
         <el-button @click="showTaskDetail = false">关闭</el-button>
       </template>
     </el-dialog>
 
+    <!-- 执行日志对话框 -->
     <el-dialog v-model="showExecuteLog" title="执行日志" width="70%">
-      <div class="log-content">
-        <el-input v-model="logContent" type="textarea" :rows="15" readonly placeholder="执行日志内容..." />
-      </div>
+      <el-input v-model="logContent" type="textarea" :rows="12" readonly placeholder="执行日志内容..." />
       <template #footer>
         <el-button @click="downloadLog">下载日志</el-button>
         <el-button @click="showExecuteLog = false">关闭</el-button>
       </template>
     </el-dialog>
 
+    <!-- 故障概要对话框 -->
     <el-dialog v-model="showIssueSummaryDialog" title="故障概要信息" width="60%">
       <div class="issue-summary" v-if="currentIssue">
         <el-descriptions :column="1" border>
@@ -214,9 +212,7 @@
           <el-descriptions-item label="发生时间">{{ currentIssue.time }}</el-descriptions-item>
           <el-descriptions-item label="故障模块">{{ currentIssue.module }}</el-descriptions-item>
           <el-descriptions-item label="错误信息">
-            <div class="error-message">
-              {{ getErrorMessage(currentIssue.subType) }}
-            </div>
+            <div class="error-message">{{ getErrorMessage(currentIssue.subType) }}</div>
           </el-descriptions-item>
         </el-descriptions>
       </div>
@@ -224,33 +220,24 @@
         <el-button @click="showIssueSummaryDialog = false">关闭</el-button>
       </template>
     </el-dialog>
-
-    <el-dialog v-model="showNodeDetail" title="节点详情" width="400px">
-      <div v-if="currentNode">
-        <div>节点ID：{{ currentNode.id }}</div>
-        <div>名称：{{ currentNode.label }}</div>
-        <div>类型：{{ currentNode.type || '页面' }}</div>
-        <div v-if="currentNode.image"><img :src="currentNode.image" style="max-width: 100%" /></div>
-      </div>
-      <template #footer>
-        <el-button @click="showNodeDetail = false">关闭</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import { Document, Download, DataAnalysis, Share, Warning, Close } from '@element-plus/icons-vue';
+import { Document, Download, DataAnalysis, Close } from '@element-plus/icons-vue';
 import PathMap from '@/components/PathMap/PathMap.vue';
 
 const router = useRouter();
 
-// 任务详情对话框
+// 对话框状态
 const showTaskDetail = ref(false);
 const showExecuteLog = ref(false);
+const showIssueSummaryDialog = ref(false);
+
+// 执行日志内容
 const logContent = ref(`2024-07-31 08:20:07 Info 开始执行测试任务
 2024-07-31 08:20:08 Info 启动应用: com.huawei.testmall
 2024-07-31 08:20:10 Info 开始遍历应用界面
@@ -261,7 +248,7 @@ const logContent = ref(`2024-07-31 08:20:07 Info 开始执行测试任务
 2024-07-31 08:30:45 Info 继续遍历...
 2024-07-31 08:50:34 Info 测试任务完成`);
 
-// 路径地图相关
+// 路径地图数据
 type NodeType = {
   id: number | string;
   label: string;
@@ -269,25 +256,6 @@ type NodeType = {
   type?: string;
   visitCount?: number;
 };
-
-// const nodes = ref<NodeType[]>(
-//   Array.from({ length: 21 }, (_, i) => ({
-//     id: i + 1,
-//     label: `pages/Index`,
-//     image: `/images/file_${(i % 11) + 1}.png`,
-//     type: '页面',
-//     visitCount: Math.floor(Math.random() * 20) + 1
-//   }))
-// );
-
-// const edges = ref(
-//   Array.from({ length: 20 }, (_, i) => ({
-//     from: i + 1,
-//     to: i + 2,
-//     label: `跳转${i + 1}`,
-//     color: { color: '#409eff' }
-//   }))
-// );
 
 const nodes = ref<NodeType[]>([
   { id: 1, label: '入口A', image: '/images/file_1.png', type: '入口' },
@@ -304,90 +272,30 @@ const edges = ref([
   { from: 2, to: 3, label: '2到3', color: { color: '#409eff' } },
   { from: 3, to: 4, label: '3到出口A', color: { color: '#409eff' } },
   { from: 5, to: 6, label: 'B到6', color: { color: '#67c23a' } },
-  { from: 6, to: 3, label: '6到3', color: { color: '#e6a23c' } }, // 汇合到3
+  { from: 6, to: 3, label: '6到3', color: { color: '#e6a23c' } },
   { from: 6, to: 7, label: '6到出口7', color: { color: '#67c23a' } },
   { from: 7, to: 6, label: '7到出口6', color: { color: '#67c23a' } }
 ]);
 
 const selectedNode = ref<NodeType | null>(null);
-const showNodeDetail = ref(false);
-const currentNode = ref<NodeType | null>(null);
 
 function onNodeClick(nodeId: number | string) {
   const node = nodes.value.find(n => n.id === nodeId);
   if (node) {
     selectedNode.value = node;
-    currentNode.value = node;
-    showNodeDetail.value = true;
   }
 }
 
-// 问题列表相关
+// 问题列表数据
 const issueList = ref([
-  {
-    no: 1,
-    type: '应用崩溃故障',
-    subType: 'JS_ERROR',
-    module: 'com.huawei.testmall',
-    time: '2024-07-31 08:29:25',
-    count: 1
-  },
-  {
-    no: 2,
-    type: '应用冻屏故障',
-    subType: 'APP_FREEZE',
-    module: 'com.huawei.testmall',
-    time: '2024-07-31 08:33:42',
-    count: 2
-  },
-  {
-    no: 3,
-    type: '进程崩溃',
-    subType: 'CPP_CRASH',
-    module: 'com.huawei.testmall',
-    time: '2024-07-31 08:45:15',
-    count: 1
-  },
-  {
-    no: 4,
-    type: '句柄泄漏故障',
-    subType: 'HANDLE_LEAK',
-    module: 'com.huawei.testmall.ui',
-    time: '2024-07-31 08:50:22',
-    count: 3
-  },
-  {
-    no: 5,
-    type: '线程泄漏故障',
-    subType: 'THREAD_LEAK',
-    module: 'com.huawei.testmall.network',
-    time: '2024-07-31 08:55:18',
-    count: 2
-  },
-  {
-    no: 6,
-    type: '内存泄漏故障',
-    subType: 'MEMORY_LEAK',
-    module: 'com.huawei.testmall.cache',
-    time: '2024-07-31 09:01:33',
-    count: 4
-  },
-  {
-    no: 7,
-    type: '应用崩溃故障',
-    subType: 'NULL_POINTER',
-    module: 'com.huawei.testmall.api',
-    time: '2024-07-31 09:05:47',
-    count: 1
-  },
-  {
-    no: 8,
-    type: '应用冻屏故障',
-    subType: 'UI_BLOCK',
-    module: 'com.huawei.testmall.main',
-    time: '2024-07-31 09:12:15',
-    count: 2
-  }
+  { no: 1, type: '应用崩溃故障', subType: 'JS_ERROR', module: 'com.huawei.testmall', time: '2024-07-31 08:29:25', count: 1 },
+  { no: 2, type: '应用冻屏故障', subType: 'APP_FREEZE', module: 'com.huawei.testmall', time: '2024-07-31 08:33:42', count: 2 },
+  { no: 3, type: '进程崩溃', subType: 'CPP_CRASH', module: 'com.huawei.testmall', time: '2024-07-31 08:45:15', count: 1 },
+  { no: 4, type: '句柄泄漏故障', subType: 'HANDLE_LEAK', module: 'com.huawei.testmall.ui', time: '2024-07-31 08:50:22', count: 3 },
+  { no: 5, type: '线程泄漏故障', subType: 'THREAD_LEAK', module: 'com.huawei.testmall.network', time: '2024-07-31 08:55:18', count: 2 },
+  { no: 6, type: '内存泄漏故障', subType: 'MEMORY_LEAK', module: 'com.huawei.testmall.cache', time: '2024-07-31 09:01:33', count: 4 },
+  { no: 7, type: '应用崩溃故障', subType: 'NULL_POINTER', module: 'com.huawei.testmall.api', time: '2024-07-31 09:05:47', count: 1 },
+  { no: 8, type: '应用冻屏故障', subType: 'UI_BLOCK', module: 'com.huawei.testmall.main', time: '2024-07-31 09:12:15', count: 2 }
 ]);
 
 const typeFilters = ref([
@@ -399,7 +307,6 @@ const typeFilters = ref([
   { text: '内存泄漏故障', value: '内存泄漏故障' }
 ]);
 
-const showIssueSummaryDialog = ref(false);
 const currentIssue = ref<any>(null);
 
 function getTypeTagType(type: string): 'danger' | 'warning' | 'info' | 'success' | 'primary' {
@@ -429,15 +336,13 @@ function showIssueSummary(row: any) {
 
 function getErrorMessage(subType: string) {
   const messages: { [key: string]: string } = {
-    JS_ERROR:
-      "TypeError: Cannot read property 'data' of undefined\n    at pages/Index.js:45:12\n    at onClick (pages/Index.js:38:5)",
+    JS_ERROR: "TypeError: Cannot read property 'data' of undefined\n    at pages/Index.js:45:12\n    at onClick (pages/Index.js:38:5)",
     APP_FREEZE: '应用主线程被阻塞超过5秒，可能由于主线程执行耗时操作导致',
     CPP_CRASH: 'SIGSEGV(信号11)段错误，访问了无效的内存地址',
     HANDLE_LEAK: '检测到句柄泄漏，当前进程句柄数量: 1024，超出正常范围',
     THREAD_LEAK: '检测到线程泄漏，活跃线程数: 156，部分线程未正确释放',
     MEMORY_LEAK: '检测到内存泄漏，内存使用量持续增长，当前占用: 512MB',
-    NULL_POINTER:
-      'NullPointerException: null对象引用\n    at com.huawei.testmall.api.ApiManager.getData(ApiManager.java:89)',
+    NULL_POINTER: 'NullPointerException: null对象引用\n    at com.huawei.testmall.api.ApiManager.getData(ApiManager.java:89)',
     UI_BLOCK: 'UI线程阻塞超过3秒，可能由于网络请求或数据库操作在主线程执行'
   };
   return messages[subType] || '暂无错误详情';
@@ -455,7 +360,6 @@ function refreshIssues() {
   ElMessage.success('问题列表已刷新');
 }
 
-// 其他功能
 function exportReport() {
   ElMessage.success('报告导出中...');
 }
@@ -475,18 +379,18 @@ function goBack() {
 
 <style scoped lang="scss">
 .explore-report {
-  padding: 20px;
+  padding: 16px;
   min-height: 100vh;
 
   :deep(.el-steps) {
-    margin-bottom: 24px;
+    margin-bottom: 20px;
   }
 }
 
 .report-content {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
+  gap: 16px;
 }
 
 // 通用卡片样式
@@ -495,7 +399,7 @@ function goBack() {
 .map-card,
 .issues-card {
   :deep(.el-card__header) {
-    padding: 16px 20px;
+    padding: 12px 16px;
     background-color: #f8f9fa;
     border-bottom: 1px solid #e4e7ed;
 
@@ -507,12 +411,12 @@ function goBack() {
       color: #303133;
 
       > span {
-        margin-left: 8px;
+        margin-left: 6px;
       }
 
       .map-stats {
         display: flex;
-        gap: 8px;
+        gap: 6px;
 
         :deep(.el-tag) {
           font-size: 12px;
@@ -522,7 +426,7 @@ function goBack() {
   }
 
   :deep(.el-card__body) {
-    padding: 20px;
+    padding: 16px;
   }
 }
 
@@ -534,55 +438,56 @@ function goBack() {
 .task-info {
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 24px;
+  gap: 20px;
   align-items: center;
 }
 
 .task-basic {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .task-title {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 
   .el-icon {
-    font-size: 28px;
+    font-size: 24px;
     color: #409eff;
   }
 
   .name {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 600;
     color: #303133;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
   }
 
   .type {
-    font-size: 14px;
+    font-size: 13px;
     color: #606266;
   }
 }
 
 .task-actions {
+  margin-top: 8px;
   display: flex;
-  gap: 12px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
 .task-details {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+  gap: 12px;
 }
 
 .detail-group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 
   .label {
     font-size: 12px;
@@ -605,36 +510,36 @@ function goBack() {
 .overview-content {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
 }
 
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 20px;
+  gap: 16px;
 
   .stat-item {
     text-align: center;
-    padding: 12px;
+    padding: 10px 8px;
     background: #f8f9fa;
-    border-radius: 8px;
+    border-radius: 6px;
     border: 1px solid #e4e7ed;
     transition: all 0.3s ease;
 
     &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
 
     .value {
-      font-size: 28px;
+      font-size: 24px;
       font-weight: 600;
       color: #409eff;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
 
     .label {
-      font-size: 14px;
+      font-size: 13px;
       color: #606266;
       font-weight: 500;
     }
@@ -644,10 +549,10 @@ function goBack() {
 .model-path {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 16px;
+  gap: 10px;
+  padding: 0 12px;
   background: #f8f9fa;
-  border-radius: 6px;
+  border-radius: 4px;
 
   .path-info {
     flex: 1;
@@ -655,11 +560,11 @@ function goBack() {
     .path-label {
       font-weight: 600;
       color: #303133;
-      margin-right: 8px;
+      margin-right: 6px;
     }
 
     .path-value {
-      font-size: 14px;
+      font-size: 13px;
       color: #606266;
     }
   }
@@ -671,16 +576,16 @@ function goBack() {
 }
 
 .map-container {
-  min-height: 480px;
+  min-height: 400px;
   display: flex;
-  gap: 20px;
+  gap: 16px;
 
   .map-view {
     flex: 3;
     width: 100%;
     height: 100%;
     border: 1px solid #e4e7ed;
-    border-radius: 6px;
+    border-radius: 4px;
     background: #fafafa;
   }
 
@@ -688,14 +593,14 @@ function goBack() {
     flex: 1;
     background: white;
     border: 1px solid #e4e7ed;
-    border-radius: 6px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 
     .detail-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 12px 16px;
+      padding: 10px 12px;
       background: #f8f9fa;
       font-weight: 600;
       color: #303133;
@@ -703,13 +608,13 @@ function goBack() {
     }
 
     .detail-body {
-      padding: 16px;
+      padding: 12px;
 
       .detail-row {
         display: flex;
         justify-content: space-between;
-        margin-bottom: 12px;
-        font-size: 14px;
+        margin-bottom: 8px;
+        font-size: 13px;
 
         &:last-child {
           margin-bottom: 0;
@@ -728,9 +633,8 @@ function goBack() {
     }
 
     .detail-image {
-      padding: 0 16px 16px;
-      max-width: 300px;
-      margin: 0 auto;
+      padding: 0 12px 12px;
+      
       img {
         width: 100%;
         border-radius: 4px;
@@ -747,7 +651,7 @@ function goBack() {
 
 // 表格样式
 :deep(.el-table) {
-  border-radius: 6px;
+  border-radius: 4px;
   overflow: hidden;
 
   .el-table__header th {
@@ -757,7 +661,7 @@ function goBack() {
   }
 
   .el-tag {
-    border-radius: 4px;
+    border-radius: 3px;
     font-weight: 500;
   }
 
@@ -768,10 +672,10 @@ function goBack() {
 
 // 对话框样式
 :deep(.el-dialog) {
-  border-radius: 8px;
+  border-radius: 6px;
 
   .el-dialog__header {
-    padding: 20px 24px 16px;
+    padding: 16px 20px 12px;
     border-bottom: 1px solid #e4e7ed;
 
     .el-dialog__title {
@@ -781,39 +685,35 @@ function goBack() {
   }
 
   .el-dialog__body {
-    padding: 20px 24px;
+    padding: 16px 20px;
   }
 
   .el-dialog__footer {
-    padding: 16px 24px 20px;
+    padding: 12px 20px 16px;
     border-top: 1px solid #e4e7ed;
   }
 }
 
-.task-detail-content,
-.log-content,
-.issue-summary {
-  .error-message {
-    background: #f5f5f5;
-    padding: 12px;
-    border-radius: 4px;
-    font-family: 'Courier New', monospace;
-    font-size: 13px;
-    line-height: 1.5;
-    white-space: pre-line;
-    color: #e74c3c;
-  }
+.error-message {
+  background: #f5f5f5;
+  padding: 10px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: pre-line;
+  color: #e74c3c;
 }
 
-// 简单的响应式：只有一个断点
+// 响应式设计
 @media (max-width: 900px) {
   .explore-report {
-    padding: 16px;
+    padding: 12px;
   }
 
   .report-content {
     grid-template-columns: 1fr;
-    gap: 16px;
+    gap: 12px;
   }
 
   .task-card,
@@ -823,13 +723,13 @@ function goBack() {
     grid-column: span 1;
 
     :deep(.el-card__body) {
-      padding: 16px;
+      padding: 12px;
     }
   }
 
   .task-info {
     grid-template-columns: 1fr;
-    gap: 16px;
+    gap: 12px;
   }
 
   .task-actions {
@@ -837,24 +737,24 @@ function goBack() {
 
     :deep(.el-button) {
       flex: 1;
-      min-width: calc(50% - 6px);
+      min-width: calc(50% - 4px);
     }
   }
 
   .task-details {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 8px;
   }
 
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
+    gap: 12px;
 
     .stat-item {
-      padding: 16px 12px;
+      padding: 12px 8px;
 
       .value {
-        font-size: 24px;
+        font-size: 20px;
       }
     }
   }
@@ -862,15 +762,21 @@ function goBack() {
   .model-path {
     flex-direction: column;
     align-items: flex-start;
-    gap: 8px;
+    gap: 6px;
   }
 
   .map-container {
-    min-height: 300px;
-  }
+    min-height: 280px;
+    flex-direction: column;
 
-  .map-view {
-    height: 300px;
+    .map-view {
+      height: 200px;
+    }
+
+    .node-detail {
+      max-height: 200px;
+      overflow-y: auto;
+    }
   }
 }
 </style>
