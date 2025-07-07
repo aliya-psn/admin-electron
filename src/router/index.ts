@@ -47,6 +47,22 @@ export const constantRoutes: RouteRecordRaw[] = [
  */
 export const dynamicRoutes: RouteRecordRaw[] = [
   {
+    path: '/environment-setup',
+    component: Layouts,
+    children: [
+      {
+        name: 'environment-setup',
+        path: 'index',
+        component: () => import('@/views/environment-setup/index.vue'),
+        meta: {
+          title: '环境配置',
+          svgIcon: '环境配置',
+          keepAlive: true
+        }
+      }
+    ]
+  },
+  {
     path: '/explore-task',
     component: Layouts,
     children: [
