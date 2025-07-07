@@ -69,15 +69,15 @@
               <div class="description">{{ item.description }}</div>
             </div>
             <div class="status-actions">
-              <el-button
-                size="small"
-                :type="item.status === 'success' ? 'success' : 'primary'"
-                @click="item.status === 'success' ? checkEnvironment(item) : installEnvironment(item)"
-                :loading="item.installing || item.checking"
-                :disabled="item.checking"
-              >
-                {{ getActionButtonText(item) }}
-              </el-button>
+                              <el-button
+                  size="small"
+                  :type="item.status === 'success' ? 'success' : 'primary'"
+                  @click="handleActionButtonClick(item)"
+                  :loading="item.checking"
+                  :disabled="item.checking"
+                >
+                  {{ getActionButtonText(item) }}
+                </el-button>
               <el-button
                 size="small"
                 @click="checkEnvironment(item)"
@@ -101,6 +101,19 @@
         <el-collapse v-model="activeGuides">
           <el-collapse-item v-for="item in environmentItems" :key="item.key" :title="item.name" :name="item.key">
             <div class="guide-content">
+              <div class="guide-check">
+                <h4>检测命令：</h4>
+                <div class="command-item">
+                  <el-input readonly :value="item.checkCommand" class="command-input">
+                    <template #append>
+                      <el-button @click="copyCommand(item.checkCommand)">复制</el-button>
+                      <el-button type="success" @click="executeCommand(item.checkCommand)" :loading="item.checkCommand === executingCommand">
+                        检测
+                      </el-button>
+                    </template>
+                  </el-input>
+                </div>
+              </div>
               <div class="guide-steps">
                 <h4>安装步骤：</h4>
                 <ol>
@@ -132,7 +145,7 @@
       </el-card>
 
       <!-- 命令执行结果 -->
-      <el-card class="result-card" v-if="commandResult">
+      <el-card ref="resultCardRef" class="result-card" v-if="commandResult">
         <template #header>
           <div class="card-header">
             <span>执行结果</span>
@@ -157,12 +170,71 @@
           </div>
         </div>
       </el-card>
+            </div>
+
+        <!-- 安装进度对话框 -->
+        <el-dialog v-model="installDialog.visible" :title="installDialog.title" width="600px" :close-on-click-modal="false">
+            <div class="install-progress">
+                <div class="progress-header">
+                    <div class="progress-info">
+                        <span>安装进度：{{ installDialog.currentStep }} / {{ installDialog.totalSteps }}</span>
+                        <el-progress 
+                            :percentage="Math.round((installDialog.currentStep / installDialog.totalSteps) * 100)"
+                            :status="installDialog.currentStep === installDialog.totalSteps ? 'success' : undefined"
+                        />
+                    </div>
+                    <div class="current-command" v-if="installDialog.currentCommand">
+                        <strong>当前执行：</strong>
+                        <code>{{ installDialog.currentCommand }}</code>
+                    </div>
+                </div>
+                
+                <div class="progress-logs">
+                    <h4>执行日志：</h4>
+                    <div class="log-container">
+                        <div 
+                            v-for="(log, index) in installDialog.logs" 
+                            :key="index" 
+                            class="log-item"
+                            :class="`log-${log.status}`"
+                        >
+                            <div class="log-command">
+                                <el-icon v-if="log.status === 'running'" class="loading-icon">
+                                    <Loading />
+                                </el-icon>
+                                <el-icon v-else-if="log.status === 'success'" class="success-icon">
+                                    <SuccessFilled />
+                                </el-icon>
+                                <el-icon v-else-if="log.status === 'error'" class="error-icon">
+                                    <CloseBold />
+                                </el-icon>
+                                <code>{{ log.command }}</code>
+                            </div>
+                            <div v-if="log.output" class="log-output">
+                                <pre>{{ log.output }}</pre>
+                            </div>
+                            <div v-if="log.error" class="log-error">
+                                <pre>{{ log.error }}</pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <template #footer>
+                <el-button 
+                    @click="closeInstallDialog"
+                    :type="installDialog.currentStep === installDialog.totalSteps ? 'primary' : 'default'"
+                >
+                    {{ installDialog.currentStep === installDialog.totalSteps ? '完成' : '最小化' }}
+                </el-button>
+            </template>
+        </el-dialog>
     </div>
-  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted, nextTick } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Refresh, Monitor, Loading, SuccessFilled, CloseBold, QuestionFilled } from '@element-plus/icons-vue';
 
@@ -186,6 +258,22 @@ const activeGuides = ref<string[]>([]);
 const executingCommand = ref<string>('');
 const commandResult = ref<any>(null);
 const systemInfo = ref<any>({});
+const resultCardRef = ref<any>(null);
+
+// 安装进度对话框
+const installDialog = ref({
+  visible: false,
+  title: '',
+  currentStep: 0,
+  totalSteps: 0,
+  currentCommand: '',
+  logs: [] as Array<{
+    command: string;
+    status: 'running' | 'success' | 'error';
+    output?: string;
+    error?: string;
+  }>
+});
 
 // 根据操作系统生成环境配置
 function generateEnvironmentItems(platform: string): EnvironmentItem[] {
@@ -368,10 +456,50 @@ const overallStatus = computed(() => {
 
 // 获取操作按钮文本
 function getActionButtonText(item: EnvironmentItem): string {
-  if (item.installing) return '安装中...';
+  if (item.installing) return '查看进度';
   if (item.checking) return '检测中...';
   if (item.status === 'success') return '已安装';
   return '安装';
+}
+
+// 处理操作按钮点击
+function handleActionButtonClick(item: EnvironmentItem) {
+  if (item.status === 'success') {
+    // 已安装状态，重新检测
+    checkEnvironment(item);
+  } else if (item.installing) {
+    // 正在安装，重新打开进度对话框
+    reopenInstallDialog(item);
+  } else {
+    // 未安装状态，开始安装
+    installEnvironment(item);
+  }
+}
+
+// 重新打开安装进度对话框
+function reopenInstallDialog(item: EnvironmentItem) {
+  if (installDialog.value.title === `安装 ${item.name}`) {
+    installDialog.value.visible = true;
+  }
+}
+
+// 关闭安装进度对话框
+function closeInstallDialog() {
+  installDialog.value.visible = false;
+  
+  // 如果安装已完成，清理状态
+  if (installDialog.value.currentStep === installDialog.value.totalSteps) {
+    setTimeout(() => {
+      installDialog.value = {
+        visible: false,
+        title: '',
+        currentStep: 0,
+        totalSteps: 0,
+        currentCommand: '',
+        logs: []
+      };
+    }, 300); // 延迟清理，确保对话框动画完成
+  }
 }
 
 // 获取系统标签类型
@@ -457,26 +585,71 @@ async function installEnvironment(item: EnvironmentItem) {
 
   if (!result) return;
 
+  // 初始化安装进度对话框
+  installDialog.value = {
+    visible: true,
+    title: `安装 ${item.name}`,
+    currentStep: 0,
+    totalSteps: item.installCommands.length,
+    currentCommand: '',
+    logs: []
+  };
+
   item.installing = true;
 
   try {
-    for (const command of item.installCommands) {
-      ElMessage.info(`正在执行: ${command}`);
-      const result = await (window as any).cmdAPI.exec(command);
+    for (let i = 0; i < item.installCommands.length; i++) {
+      const command = item.installCommands[i];
+      
+      // 更新当前命令和步骤
+      installDialog.value.currentCommand = command;
+      installDialog.value.currentStep = i;
+      
+      // 添加日志条目
+      const logEntry = {
+        command,
+        status: 'running' as 'running' | 'success' | 'error',
+        output: '',
+        error: ''
+      };
+      installDialog.value.logs.push(logEntry);
 
-      if (!result.success) {
-        throw new Error(`命令执行失败: ${result.stderr || result.error}`);
+      try {
+        const result = await (window as any).cmdAPI.exec(command);
+
+        if (result.success) {
+          // 命令执行成功
+          logEntry.status = 'success';
+          logEntry.output = result.stdout || '执行成功';
+        } else {
+          // 命令执行失败
+          logEntry.status = 'error';
+          logEntry.error = result.stderr || result.error || '执行失败';
+          throw new Error(`命令执行失败: ${result.stderr || result.error}`);
+        }
+      } catch (error) {
+        logEntry.status = 'error';
+        logEntry.error = String(error);
+        throw error;
       }
     }
 
+    // 所有命令执行完成
+    installDialog.value.currentStep = item.installCommands.length;
+    installDialog.value.currentCommand = '';
+    
     ElMessage.success(`${item.name} 安装完成`);
 
     // 重新检测
     setTimeout(() => {
       checkEnvironment(item);
     }, 1000);
+
   } catch (error) {
     ElMessage.error(`${item.name} 安装失败: ${error}`);
+    
+    // 安装失败时，显示失败状态但不自动关闭对话框
+    installDialog.value.currentCommand = '安装失败';
   } finally {
     item.installing = false;
   }
@@ -502,11 +675,27 @@ async function executeCommand(command: string) {
     } else {
       ElMessage.error('命令执行失败');
     }
+
+    // 自动滚动到执行结果区域
+    scrollToResult();
   } catch (error) {
     ElMessage.error(`执行命令失败: ${error}`);
   } finally {
     executingCommand.value = '';
   }
+}
+
+// 滚动到执行结果区域
+function scrollToResult() {
+  // 使用nextTick确保DOM更新完成
+  nextTick(() => {
+    if (resultCardRef.value?.$el) {
+      resultCardRef.value.$el.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
+  });
 }
 
 // 复制命令
@@ -713,6 +902,43 @@ onMounted(async () => {
     font-size: 14px;
   }
 
+  .guide-check {
+    padding: 12px;
+    background-color: #f0f9ff;
+    border-radius: 6px;
+    border-left: 4px solid #67c23a;
+    margin-bottom: 16px;
+
+    h4 {
+      margin: 0 0 8px 0 !important;
+      color: #67c23a;
+      font-weight: 600;
+    }
+
+    .command-item {
+      margin-bottom: 0;
+
+      .command-input {
+        :deep(.el-input__inner) {
+          font-family: 'Courier New', monospace;
+          font-size: 13px;
+        }
+
+        :deep(.el-input-group__append) {
+          .el-button {
+            width: auto;
+            min-width: 60px;
+            margin-left: 0;
+
+            &:not(:last-child) {
+              margin-right: 8px;
+            }
+          }
+        }
+      }
+    }
+  }
+
   .guide-steps {
     ol {
       margin: 0;
@@ -820,6 +1046,138 @@ onMounted(async () => {
   }
 }
 
+// 安装进度对话框样式
+.install-progress {
+  .progress-header {
+    margin-bottom: 20px;
+
+    .progress-info {
+      margin-bottom: 12px;
+
+      span {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #303133;
+      }
+    }
+
+    .current-command {
+      padding: 8px 12px;
+      background-color: #f5f7fa;
+      border-radius: 4px;
+      border-left: 4px solid #409eff;
+
+      strong {
+        color: #303133;
+        margin-right: 8px;
+      }
+
+      code {
+        font-family: 'Courier New', monospace;
+        font-size: 13px;
+        color: #409eff;
+        background-color: transparent;
+      }
+    }
+  }
+
+  .progress-logs {
+    h4 {
+      margin: 0 0 12px 0;
+      color: #303133;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .log-container {
+      max-height: 300px;
+      overflow-y: auto;
+      border: 1px solid #e4e7ed;
+      border-radius: 4px;
+      background-color: #fafafa;
+    }
+
+    .log-item {
+      padding: 8px 12px;
+      border-bottom: 1px solid #e4e7ed;
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      &.log-running {
+        background-color: #ecf5ff;
+        border-left: 4px solid #409eff;
+      }
+
+      &.log-success {
+        background-color: #f0f9ff;
+        border-left: 4px solid #67c23a;
+      }
+
+      &.log-error {
+        background-color: #fef0f0;
+        border-left: 4px solid #f56c6c;
+      }
+
+      .log-command {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 4px;
+
+        .loading-icon {
+          color: #409eff;
+          animation: rotating 2s linear infinite;
+        }
+
+        .success-icon {
+          color: #67c23a;
+        }
+
+        .error-icon {
+          color: #f56c6c;
+        }
+
+        code {
+          font-family: 'Courier New', monospace;
+          font-size: 13px;
+          color: #303133;
+          background-color: transparent;
+          padding: 0;
+        }
+      }
+
+      .log-output, .log-error {
+        margin-top: 8px;
+
+        pre {
+          margin: 0;
+          padding: 8px;
+          background-color: rgba(255, 255, 255, 0.8);
+          border-radius: 4px;
+          font-family: 'Courier New', monospace;
+          font-size: 12px;
+          line-height: 1.4;
+          white-space: pre-wrap;
+          word-break: break-all;
+        }
+      }
+
+      .log-error pre {
+        background-color: rgba(245, 108, 108, 0.1);
+        color: #f56c6c;
+      }
+    }
+  }
+}
+
+// 工具类
+.mr-1 {
+  margin-right: 4px;
+}
+
 // 响应式设计
 @media (max-width: 900px) {
   .environment-setup {
@@ -838,6 +1196,19 @@ onMounted(async () => {
       :deep(.el-button) {
         width: 100px;
         flex-shrink: 0;
+      }
+    }
+  }
+
+  .install-progress {
+    .log-container {
+      max-height: 200px;
+    }
+
+    .current-command {
+      code {
+        font-size: 12px;
+        word-break: break-all;
       }
     }
   }
