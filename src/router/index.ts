@@ -69,6 +69,16 @@ export const dynamicRoutes: RouteRecordRaw[] = [
           svgIcon: '任务配置',
           keepAlive: true
         }
+      },
+      {
+        name: 'explore-task-report',
+        path: 'report',
+        component: () => import('@/views/explore-task/report.vue'),
+        meta: {
+          title: '查看报告',
+          svgIcon: '任务配置',
+          keepAlive: true
+        }
       }
     ]
   },
