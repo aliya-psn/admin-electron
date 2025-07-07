@@ -1,5 +1,4 @@
 import { type RouteRecordRaw, createRouter, createWebHashHistory } from 'vue-router';
-import { history } from './helper';
 
 const Layouts = () => import('@/layouts/index.vue');
 /**
@@ -47,6 +46,32 @@ export const constantRoutes: RouteRecordRaw[] = [
  * 必须带有 Name 属性
  */
 export const dynamicRoutes: RouteRecordRaw[] = [
+  {
+    path: '/explore-task',
+    component: Layouts,
+    children: [
+      {
+        name: 'explore-task',
+        path: 'index',
+        component: () => import('@/views/explore-task/config.vue'),
+        meta: {
+          title: '任务配置',
+          svgIcon: '任务配置',
+          keepAlive: true
+        }
+      },
+      {
+        name: 'explore-task-execute',
+        path: 'execute',
+        component: () => import('@/views/explore-task/execute.vue'),
+        meta: {
+          title: '执行测试',
+          svgIcon: '任务配置',
+          keepAlive: true
+        }
+      }
+    ]
+  },
   {
     path: '/project',
     component: Layouts,

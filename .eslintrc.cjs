@@ -60,4 +60,4 @@ module.exports = {
     // .eslintrc.js
     'prettier/prettier': ['error', {}, { usePrettierrc: true }] // 强制使用项目配置
   }
-}
+};

@@ -47,7 +47,7 @@ export const useUserStore = defineStore('user', () => {
     projectList.value = res.data;
 
     // 菜单权限，如果不需要动态控制，可以在 permission.ts中设置为全部，这里可不写
-    menus.value = ['user', 'project', 'file-operations', 'system-features'];
+    menus.value = ['user', 'project', 'explore-task', 'file-operations', 'system-features'];
     permissions.value = [];
   };
 
