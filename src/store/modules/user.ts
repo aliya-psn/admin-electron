@@ -31,7 +31,7 @@ export const useUserStore = defineStore('user', () => {
 
   /** 登录 */
   const login = async ({ username, password }: LoginRequestData) => {
-    const api = isElectron ? mqUserApi : loginApi;
+    const api = isElectron ? loginApi : loginApi;
     const { data } = await api.loginApi({ username, password });
     if (!data) {
       ElMessage.error('该用户名不存在！');
@@ -43,7 +43,7 @@ export const useUserStore = defineStore('user', () => {
 
   /** 获取用户详情 */
   const getInfo = async (userToken: string) => {
-    const api = isElectron ? mqUserApi : loginApi;
+    const api = isElectron ? loginApi : loginApi;
     const { data } = await api.getUserInfoApi(userToken);
     if (!data) {
       ElMessage.error('该用户信息不存在！');
@@ -56,7 +56,7 @@ export const useUserStore = defineStore('user', () => {
     roleIds.value = data.roleIds || []; // roleIds: 1最高权限
 
     // 获取项目信息
-    const proApi = isElectron ? projectMq : projectApi;
+    const proApi = isElectron ? projectApi : projectApi;
     const res = await proApi.getProjectList(Number(userId.value));
     projectList.value = res.data;
 

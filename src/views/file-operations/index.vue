@@ -323,7 +323,6 @@ const electronCreateDir = async () => {
 <style scoped>
 .file-operations-container {
   padding: 20px;
-  min-height: 100vh;
 }
 
 .operation-card {

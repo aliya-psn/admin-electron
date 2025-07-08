@@ -972,7 +972,6 @@ onMounted(async () => {
 <style scoped>
 .system-features-container {
   padding: 20px;
-  min-height: 100vh;
 }
 
 .features-card {

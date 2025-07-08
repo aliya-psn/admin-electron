@@ -22,19 +22,6 @@ export const loginApi = {
 
   /** 获取用户详情 */
   async getUserInfoApi(_username: string) {
-    // return new Promise<Login.UserInfoResponseData>(resolve => {
-    //   resolve({
-    //     code: 200,
-    //     message: '操作成功',
-    //     data: {
-    //       userId: 31,
-    //       username: 'fsl_liuyilan',
-    //       nickname: '刘怡兰',
-    //       admin: 1,
-    //       roleIds: [2]
-    //     }
-    //   });
-    // });
     return request<Login.UserInfoResponseData>({
       url: '/login/getInfo',
       method: 'post'

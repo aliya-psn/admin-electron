@@ -240,8 +240,6 @@ const removeProject = ($index: number) => {
         </template>
       </el-table-column>
       <el-table-column align="" label="创建人" prop="createUser" width="100" />
-      <!-- <el-table-column align="" label="更新人" prop="updateUser" width="100"></el-table-column>
-      <el-table-column align="" label="创建时间" prop="createTime" width="180"></el-table-column> -->
       <el-table-column align="" label="更新时间" prop="updateTime" width="180" />
 
       <el-table-column align="" label="操作" width="140" fixed="right">

@@ -78,6 +78,10 @@ interface WindowAPI {
   restoreDefaultSize: () => Promise<{ success: boolean; data?: { width: number; height: number }; error?: string }>;
 }
 
+interface CmdAPI {
+  exec: (command: string) => Promise<{ success: boolean; stdout?: string; stderr?: string; error?: string }>;
+}
+
 interface ElectronAPI {
   ipcRenderer: {
     send: (channel: string, data: any) => void;
@@ -95,6 +99,7 @@ declare global {
     notificationAPI: NotificationAPI;
     externalAPI: ExternalAPI;
     windowAPI: WindowAPI;
+    cmdAPI: CmdAPI;
     electron: ElectronAPI;
   }
 }
