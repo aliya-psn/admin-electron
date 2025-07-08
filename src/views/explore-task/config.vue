@@ -153,14 +153,14 @@
           <el-form-item label="归档包名" prop="archiveName">
             <el-input v-model="form.archiveName" maxlength="100" />
           </el-form-item>
-          <el-form-item class="submit-form-item">
+          <div class="submit-form-item">
             <el-button type="primary" class="submit-btn" @click="submitForm">
               <el-icon class="mr-1">
                 <Plus />
               </el-icon>
               创建任务
             </el-button>
-          </el-form-item>
+          </div>
         </el-form>
       </el-card>
     </div>
@@ -201,7 +201,7 @@
           <div>CPU类型：{{ selectedDevice.cpu }}</div>
         </el-card>
         <el-card class="info-card">
-          <template #header>测试Tips</template>
+          <template #header>注意事项</template>
           <div>1. 任务执行过程中，请避免PC进入休眠状态。</div>
           <div>2. 确保设备已连接并启用USB调试模式。</div>
           <div>3. 首次连接设备需要在设备上确认调试授权。</div>
@@ -452,11 +452,19 @@ const adbStatusText = computed(() => {
   }
 });
 
+// 任务名称
 function generateTaskName() {
   const now = new Date();
-  return `Task-${now.getMonth() + 1}${now.getDate()}-${now.getHours()}${now.getMinutes()}${now.getSeconds()}`;
+  const year = now.getFullYear().toString().slice(-2); // 取年份后两位
+  const month = (now.getMonth() + 1).toString().padStart(2, '0');
+  const day = now.getDate().toString().padStart(2, '0');
+  const hour = now.getHours().toString().padStart(2, '0');
+  const minute = now.getMinutes().toString().padStart(2, '0');
+  const second = now.getSeconds().toString().padStart(2, '0');
+  return `Task-${year}${month}${day}-${hour}${minute}${second}`;
 }
 
+// 归档包名
 function generateArchiveName() {
   const app = appList.value.find(a => a.id === form.value.app);
   return app ? `${app.package}_${app.version}_Task-${generateTaskName()}_graph.zip` : '';
@@ -916,7 +924,6 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: 1fr 350px;
   gap: 20px;
-  min-height: 100vh;
   padding: 20px;
 }
 
@@ -957,12 +964,11 @@ onMounted(async () => {
     display: flex;
     flex-direction: column;
     gap: 16px;
-  }
-}
 
+    
 .info-card {
   :deep(.el-card__header) {
-    padding: 12px 16px;
+    padding: 12px ;
     background-color: #f8f9fa;
     border-bottom: 1px solid #e4e7ed;
     font-weight: 600;
@@ -982,9 +988,8 @@ onMounted(async () => {
       }
     }
   }
-}
 
-// 环境状态样式
+  // 环境状态样式
 .env-status-item {
   display: flex;
   align-items: center;
@@ -997,10 +1002,14 @@ onMounted(async () => {
   color: #909399;
   margin-bottom: 8px;
 }
-
-.env-action {
-  margin-top: 8px;
 }
+
+  }
+}
+
+
+
+
 
 // 环境引导对话框样式
 .env-guide-content {
@@ -1140,7 +1149,8 @@ onMounted(async () => {
   margin-top: 16px;
 
   .submit-btn {
-    height: 36px;
+    height: 38px;
+    width: 160px;
     font-weight: 600;
     border-radius: 8px;
     background: linear-gradient(135deg, #409eff 0%, #3a8ee6 100%);
