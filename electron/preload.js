@@ -89,7 +89,8 @@ contextBridge.exposeInMainWorld('windowAPI', {
 
 // 暴露 mysqlQuery API
 contextBridge.exposeInMainWorld('mysqlAPI', {
-  query: (sql, params) => ipcRenderer.invoke('mysql-query', sql, params)
+  query: (sql, params) => ipcRenderer.invoke('mysql-query', sql, params),
+  getStatus: () => ipcRenderer.invoke('mysql-status')
 });
 
 // 暴露 execCmd API
