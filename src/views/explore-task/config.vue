@@ -9,13 +9,7 @@
         </el-steps>
 
         <!-- ADB环境状态警告 -->
-        <el-alert
-          v-if="adbStatus === 'error'"
-          type="warning"
-          show-icon
-          :closable="false"
-          class="adb-warning"
-        >
+        <el-alert v-if="adbStatus === 'error'" type="warning" show-icon :closable="false" class="adb-warning">
           <template #default>
             <div>检测到ADB环境不可用，无法进行设备管理和应用安装。</div>
             <div class="alert-actions">
@@ -44,30 +38,25 @@
           </el-form-item>
           <el-form-item label="测试设备" prop="device">
             <div class="config-select-wrapper">
-              <el-select 
-                v-model="form.device" 
-                placeholder="请选择测试设备" 
+              <el-select
+                v-model="form.device"
+                placeholder="请选择测试设备"
                 style="width: 360px"
                 :loading="deviceLoading"
                 :disabled="adbStatus !== 'success'"
                 no-data-text="无可用设备，请检查设备连接"
               >
-                <el-option 
-                  v-for="item in deviceList" 
-                  :key="item.id" 
-                  :label="item.name" 
-                  :value="item.id"
-                >
+                <el-option v-for="item in deviceList" :key="item.id" :label="item.name" :value="item.id">
                   <div class="device-option">
                     <div class="device-name">{{ item.name }}</div>
                     <div class="device-details">{{ item.model }} - API {{ item.apiLevel }}</div>
                   </div>
                 </el-option>
               </el-select>
-              <el-button 
-                type="primary" 
-                text 
-                @click="refreshDevices" 
+              <el-button
+                type="primary"
+                text
+                @click="refreshDevices"
                 :loading="deviceLoading"
                 :disabled="adbStatus !== 'success'"
                 title="刷新设备列表"
@@ -90,10 +79,10 @@
               <el-select v-model="form.app" placeholder="请选择应用" style="width: 360px">
                 <el-option v-for="item in appList" :key="item.id" :label="item.name" :value="item.id" />
               </el-select>
-              <el-button 
-                type="primary" 
-                text 
-                @click="installApp" 
+              <el-button
+                type="primary"
+                text
+                @click="installApp"
                 :loading="installing"
                 :disabled="adbStatus !== 'success'"
               >
@@ -172,7 +161,7 @@
           <template #header>环境状态</template>
           <div class="env-status-item">
             <span>ADB工具：</span>
-            <el-tag 
+            <el-tag
               :type="adbStatus === 'success' ? 'success' : adbStatus === 'checking' ? 'warning' : 'danger'"
               size="small"
             >
@@ -210,12 +199,7 @@
     </div>
 
     <!-- 环境配置引导对话框 -->
-    <el-dialog 
-      v-model="showEnvDialog" 
-      title="配置测试环境" 
-      width="500px"
-      :close-on-click-modal="false"
-    >
+    <el-dialog v-model="showEnvDialog" title="配置测试环境" width="500px" :close-on-click-modal="false">
       <div class="env-guide-content">
         <div class="env-guide-icon">
           <el-icon :size="60" color="#409eff">
@@ -224,7 +208,7 @@
         </div>
         <h3>需要安装ADB工具</h3>
         <p>为了进行Android设备管理和应用安装，需要先安装Android Debug Bridge (ADB)工具。</p>
-        
+
         <div class="quick-install">
           <h4>快速安装指南：</h4>
           <div class="install-steps">
@@ -247,7 +231,7 @@
           </div>
         </div>
       </div>
-      
+
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="showEnvDialog = false">稍后配置</el-button>
@@ -262,10 +246,10 @@
     </el-dialog>
 
     <!-- 应用安装进度对话框 -->
-    <el-dialog 
-      v-model="installDialog.visible" 
-      :title="installDialog.title" 
-      width="600px" 
+    <el-dialog
+      v-model="installDialog.visible"
+      :title="installDialog.title"
+      width="600px"
       :close-on-click-modal="false"
       :close-on-press-escape="false"
     >
@@ -312,8 +296,8 @@
       </div>
 
       <template #footer>
-        <el-button 
-          @click="closeInstallDialog" 
+        <el-button
+          @click="closeInstallDialog"
           :type="installDialog.currentStep === installDialog.totalSteps ? 'primary' : 'default'"
         >
           {{ installDialog.currentStep === installDialog.totalSteps ? '完成' : '最小化' }}
@@ -445,10 +429,14 @@ const installDialog = ref({
 // 计算属性
 const adbStatusText = computed(() => {
   switch (adbStatus.value) {
-    case 'success': return '已安装';
-    case 'error': return '未安装';
-    case 'checking': return '检测中...';
-    default: return '未知';
+    case 'success':
+      return '已安装';
+    case 'error':
+      return '未安装';
+    case 'checking':
+      return '检测中...';
+    default:
+      return '未知';
   }
 });
 
@@ -486,12 +474,12 @@ async function checkAdbEnvironment(): Promise<boolean> {
     adbStatus.value = 'error';
     return false;
   }
-  
+
   adbStatus.value = 'checking';
-  
+
   try {
     const result = await window.cmdAPI.exec('adb version');
-    
+
     if (result.success && result.stdout) {
       adbStatus.value = 'success';
       // 提取版本信息
@@ -531,10 +519,10 @@ function parseDeviceInfo(deviceLine: string): DeviceInfo | null {
     // 格式: device_id	device	product:xxx model:xxx device:xxx transport_id:xxx
     const parts = deviceLine.trim().split('\t');
     if (parts.length < 2) return null;
-    
+
     const deviceId = parts[0];
     const status = parts[1] as 'device' | 'offline' | 'unauthorized';
-    
+
     if (status !== 'device') {
       // 设备未就绪，但仍然显示
       return {
@@ -546,15 +534,15 @@ function parseDeviceInfo(deviceLine: string): DeviceInfo | null {
         status
       };
     }
-    
+
     // 解析详细信息
     const details = parts.slice(2).join(' ');
     const modelMatch = details.match(/model:([^\s]+)/);
     const productMatch = details.match(/product:([^\s]+)/);
-    
+
     const model = modelMatch ? modelMatch[1] : 'Unknown';
     const product = productMatch ? productMatch[1] : '';
-    
+
     return {
       id: deviceId,
       name: `${deviceId}${product ? `(${product})` : ''}`,
@@ -572,20 +560,20 @@ function parseDeviceInfo(deviceLine: string): DeviceInfo | null {
 // 获取设备详细信息
 async function getDeviceDetails(deviceId: string): Promise<Partial<DeviceInfo>> {
   const details: Partial<DeviceInfo> = {};
-  
+
   try {
     // 获取API级别
     const apiResult = await window.cmdAPI.exec(`adb -s ${deviceId} shell getprop ro.build.version.sdk`);
     if (apiResult.success && apiResult.stdout) {
       details.apiLevel = apiResult.stdout.trim();
     }
-    
+
     // 获取CPU架构
     const cpuResult = await window.cmdAPI.exec(`adb -s ${deviceId} shell getprop ro.product.cpu.abi`);
     if (cpuResult.success && cpuResult.stdout) {
       details.cpu = cpuResult.stdout.trim();
     }
-    
+
     // 获取更详细的型号信息
     const modelResult = await window.cmdAPI.exec(`adb -s ${deviceId} shell getprop ro.product.model`);
     if (modelResult.success && modelResult.stdout) {
@@ -595,11 +583,10 @@ async function getDeviceDetails(deviceId: string): Promise<Partial<DeviceInfo>> 
         details.name = `${deviceId}(${fullModel})`;
       }
     }
-    
   } catch (error) {
     console.error(`获取设备 ${deviceId} 详细信息失败:`, error);
   }
-  
+
   return details;
 }
 
@@ -614,31 +601,29 @@ async function refreshDevices() {
       return;
     }
   }
-  
+
   deviceLoading.value = true;
-  
+
   try {
     // 执行 adb devices -l 获取设备列表
     const result = await window.cmdAPI.exec('adb devices -l');
-    
+
     if (!result.success) {
       throw new Error(result.error || 'ADB命令执行失败');
     }
-    
+
     const output = result.stdout || '';
-    const lines = output.split('\n').filter((line: string) => 
-      line.trim() && !line.includes('List of devices')
-    );
-    
+    const lines = output.split('\n').filter((line: string) => line.trim() && !line.includes('List of devices'));
+
     if (lines.length === 0) {
       deviceList.value = [];
       ElMessage.warning('未检测到连接的设备，请确保设备已连接并启用USB调试');
       return;
     }
-    
+
     // 解析设备列表
     const devices: DeviceInfo[] = [];
-    
+
     for (const line of lines) {
       const deviceInfo = parseDeviceInfo(line);
       if (deviceInfo) {
@@ -650,16 +635,15 @@ async function refreshDevices() {
         devices.push(deviceInfo);
       }
     }
-    
+
     deviceList.value = devices;
-    
+
     // 如果当前选择的设备不在新列表中，清空选择
     if (form.value.device && !devices.find(d => d.id === form.value.device)) {
       form.value.device = '';
     }
-    
+
     ElMessage.success(`检测到 ${devices.length} 个设备`);
-    
   } catch (error) {
     console.error('刷新设备列表失败:', error);
     ElMessage.error(`设备检测失败: ${error}`);
@@ -685,9 +669,9 @@ async function checkDeviceConnection(deviceId: string): Promise<boolean> {
     const result = await window.cmdAPI.exec('adb devices');
     if (result.success && result.stdout) {
       // 检查设备是否在连接的设备列表中
-      const devices = result.stdout.split('\n').filter((line: string) => 
-        line.trim() && !line.includes('List of devices') && line.includes('device')
-      );
+      const devices = result.stdout
+        .split('\n')
+        .filter((line: string) => line.trim() && !line.includes('List of devices') && line.includes('device'));
       return devices.some((line: string) => line.includes(deviceId));
     }
     return false;
@@ -706,7 +690,7 @@ async function parseApkInfo(apkPath: string): Promise<Partial<AppInfo> | null> {
       const packageMatch = result.stdout.match(/package: name='([^']+)'/);
       const versionMatch = result.stdout.match(/versionName='([^']+)'/);
       const apiLevelMatch = result.stdout.match(/targetSdkVersion:'([^']+)'/);
-      
+
       if (packageMatch) {
         return {
           package: packageMatch[1],
@@ -719,11 +703,11 @@ async function parseApkInfo(apkPath: string): Promise<Partial<AppInfo> | null> {
         };
       }
     }
-    
+
     // 如果aapt不可用，从文件名提取基本信息
     const fileName = apkPath.split(/[/\\]/).pop() || 'unknown.apk';
     const baseName = fileName.replace('.apk', '');
-    
+
     return {
       package: `${APP_INSTALL_DEFAULTS.packagePrefix}${baseName.toLowerCase()}`,
       version: APP_INSTALL_DEFAULTS.version,
@@ -775,10 +759,10 @@ async function installApp() {
     }
 
     const apkPath = fileResult.data[0];
-    
+
     // 3. 开始安装流程
     installing.value = true;
-    
+
     // 初始化安装对话框
     installDialog.value = {
       visible: true,
@@ -793,7 +777,7 @@ async function installApp() {
     installDialog.value.currentStep = 1;
     installDialog.value.currentCommand = '检查设备连接状态...';
     addLog('检查设备连接状态', 'running');
-    
+
     const isConnected = await checkDeviceConnection(form.value.device);
     if (!isConnected) {
       addLog('设备连接检查失败', 'error', '', '请确保设备已连接并启用USB调试');
@@ -806,7 +790,7 @@ async function installApp() {
     installDialog.value.currentStep = 2;
     installDialog.value.currentCommand = '解析APK信息...';
     addLog('解析APK信息', 'running');
-    
+
     const apkInfo = await parseApkInfo(apkPath);
     if (!apkInfo) {
       addLog('APK信息解析失败', 'error');
@@ -819,10 +803,10 @@ async function installApp() {
     installDialog.value.currentStep = 3;
     installDialog.value.currentCommand = `安装APK: ${apkPath}`;
     addLog('开始安装APK到设备', 'running');
-    
+
     const installCommand = `adb -s ${form.value.device} install -r "${apkPath}"`;
     const installResult = await window.cmdAPI.exec(installCommand);
-    
+
     if (!installResult.success || (installResult.stderr && installResult.stderr.includes('FAILED'))) {
       const errorMsg = installResult.stderr || installResult.error || '安装失败';
       addLog('APK安装失败', 'error', '', errorMsg);
@@ -835,7 +819,7 @@ async function installApp() {
     installDialog.value.currentStep = 4;
     installDialog.value.currentCommand = '更新应用列表...';
     addLog('更新应用列表', 'running');
-    
+
     // 生成新的应用ID
     const newAppId = `app_${Date.now()}`;
     const newApp: AppInfo = {
@@ -864,10 +848,9 @@ async function installApp() {
 
     // 自动选择新安装的应用
     form.value.app = newAppId;
-    
+
     ElMessage.success('应用安装完成！');
     addLog('应用安装流程完成', 'success');
-
   } catch (error) {
     console.error('安装应用时发生错误:', error);
     addLog('安装过程异常', 'error', '', String(error));
@@ -881,7 +864,7 @@ async function installApp() {
 // 关闭安装对话框
 function closeInstallDialog() {
   installDialog.value.visible = false;
-  
+
   // 如果安装已完成，清理状态
   if (installDialog.value.currentStep === installDialog.value.totalSteps) {
     setTimeout(() => {
@@ -897,7 +880,6 @@ function closeInstallDialog() {
   }
 }
 
-
 function submitForm() {
   formRef.value.validate((valid: boolean) => {
     if (valid) {
@@ -911,7 +893,7 @@ function submitForm() {
 onMounted(async () => {
   // 先检查ADB环境
   const isAdbAvailable = await checkAdbEnvironment();
-  
+
   // 如果ADB可用，则尝试获取设备列表
   if (isAdbAvailable) {
     refreshDevices();
@@ -938,7 +920,7 @@ onMounted(async () => {
 // ADB警告样式
 .adb-warning {
   margin: 16px 0 24px 0;
-  
+
   .alert-actions {
     margin-top: 12px;
     display: flex;
@@ -953,7 +935,7 @@ onMounted(async () => {
   margin-top: 4px;
   color: #e6a23c;
   font-size: 12px;
-  
+
   .tip-icon {
     margin-right: 4px;
   }
@@ -965,65 +947,59 @@ onMounted(async () => {
     flex-direction: column;
     gap: 16px;
 
-    
-.info-card {
-  :deep(.el-card__header) {
-    padding: 12px ;
-    background-color: #f8f9fa;
-    border-bottom: 1px solid #e4e7ed;
-    font-weight: 600;
-    color: #303133;
-  }
+    .info-card {
+      :deep(.el-card__header) {
+        padding: 12px;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #e4e7ed;
+        font-weight: 600;
+        color: #303133;
+      }
 
-  :deep(.el-card__body) {
-    padding: 16px;
+      :deep(.el-card__body) {
+        padding: 16px;
 
-    > div {
-      margin-bottom: 8px;
-      color: #606266;
-      font-size: 14px;
+        > div {
+          margin-bottom: 8px;
+          color: #606266;
+          font-size: 14px;
 
-      &:last-child {
-        margin-bottom: 0;
+          &:last-child {
+            margin-bottom: 0;
+          }
+        }
+      }
+
+      // 环境状态样式
+      .env-status-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+      }
+
+      .env-version {
+        font-size: 12px;
+        color: #909399;
+        margin-bottom: 8px;
       }
     }
   }
-
-  // 环境状态样式
-.env-status-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
 }
-
-.env-version {
-  font-size: 12px;
-  color: #909399;
-  margin-bottom: 8px;
-}
-}
-
-  }
-}
-
-
-
-
 
 // 环境引导对话框样式
 .env-guide-content {
   text-align: center;
-  
+
   .env-guide-icon {
     margin-bottom: 16px;
   }
-  
+
   h3 {
     margin: 0 0 12px 0;
     color: #303133;
   }
-  
+
   p {
     color: #606266;
     line-height: 1.5;
@@ -1033,7 +1009,7 @@ onMounted(async () => {
 
 .quick-install {
   text-align: left;
-  
+
   h4 {
     margin: 0 0 12px 0;
     color: #303133;
@@ -1046,7 +1022,7 @@ onMounted(async () => {
     display: flex;
     align-items: center;
     margin-bottom: 8px;
-    
+
     .step-number {
       display: inline-flex;
       align-items: center;
@@ -1060,7 +1036,7 @@ onMounted(async () => {
       margin-right: 8px;
       flex-shrink: 0;
     }
-    
+
     .step-text {
       color: #606266;
       font-size: 13px;
@@ -1134,7 +1110,7 @@ onMounted(async () => {
     font-weight: 500;
     color: #303133;
   }
-  
+
   .device-details {
     font-size: 12px;
     color: #909399;
@@ -1173,10 +1149,10 @@ onMounted(async () => {
 .install-progress {
   .progress-header {
     margin-bottom: 20px;
-    
+
     .progress-info {
       margin-bottom: 10px;
-      
+
       span {
         display: block;
         margin-bottom: 8px;
@@ -1184,13 +1160,13 @@ onMounted(async () => {
         font-size: 14px;
       }
     }
-    
+
     .current-command {
       padding: 8px 12px;
       background-color: #f5f7fa;
       border-radius: 4px;
       border-left: 3px solid #409eff;
-      
+
       code {
         font-family: 'Courier New', monospace;
         color: #409eff;
@@ -1198,85 +1174,87 @@ onMounted(async () => {
       }
     }
   }
-  
+
+  // 安装日志
   .progress-logs {
     h4 {
       margin: 0 0 12px 0;
       color: #303133;
       font-size: 16px;
     }
-    
+
     .log-container {
       max-height: 300px;
       overflow-y: auto;
       border: 1px solid #e4e7ed;
       border-radius: 4px;
       background-color: #fafafa;
-      
+
       .log-item {
         padding: 8px 12px;
         border-bottom: 1px solid #f0f0f0;
-        
+
         &:last-child {
           border-bottom: none;
         }
-        
+
         .log-command {
           display: flex;
           align-items: center;
           gap: 8px;
           font-size: 14px;
-          
+
           .loading-icon {
             color: #409eff;
             animation: rotate 1s linear infinite;
           }
-          
+
           .success-icon {
             color: #67c23a;
           }
-          
+
           .error-icon {
             color: #f56c6c;
           }
         }
-        
-        .log-output, .log-error {
+
+        .log-output,
+        .log-error {
           margin-top: 8px;
           padding: 8px;
           border-radius: 4px;
           font-size: 12px;
-          
+
           pre {
             margin: 0;
             white-space: pre-wrap;
             word-break: break-all;
           }
         }
-        
+
         .log-output {
           background-color: #f0f9ff;
           border: 1px solid #e1f5fe;
         }
-        
+
         .log-error {
           background-color: #fef2f2;
           border: 1px solid #fecaca;
           color: #dc2626;
         }
-        
+
         &.log-running {
           .log-command {
             color: #409eff;
           }
         }
-        
+
         &.log-success {
           .log-command {
             color: #67c23a;
           }
         }
-        
+
         &.log-error {
           .log-command {
             color: #f56c6c;
@@ -1296,7 +1274,6 @@ onMounted(async () => {
   }
 }
 
-// 简单的响应式：只有一个断点
 @media (max-width: 900px) {
   .explore-task-config {
     grid-template-columns: 1fr;
