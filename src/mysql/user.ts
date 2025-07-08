@@ -14,7 +14,7 @@ function attachRoles(list: any[]) {
   });
 }
 
-export const mqUserApi = {
+export const userMq = {
   // 登录
   async loginApi(data: Login.LoginRequestData) {
     const sql = 'SELECT COUNT(*) as count FROM user WHERE username = ?';

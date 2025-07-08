@@ -5,10 +5,10 @@ import { useTagsViewStore } from './tags-view';
 import { useSettingsStore } from './settings';
 import { getToken, removeToken, setToken } from '@/utils/token-storage';
 import { resetRouter } from '@/router';
-import { mqUserApi } from '@/mysql/user';
+import { projectMq } from '@/mysql/project';
+import { userMq } from '@/mysql/user';
 import { loginApi } from '@/api/login';
 import { projectApi } from '@/api/project';
-import { projectMq } from '@/mysql/project';
 import { type LoginRequestData } from '@/api/types/login';
 import { ProjectSelectModel } from '@/api/types/project';
 import { ElMessage } from 'element-plus';
@@ -31,7 +31,7 @@ export const useUserStore = defineStore('user', () => {
 
   /** 登录 */
   const login = async ({ username, password }: LoginRequestData) => {
-    const api = isElectron ? loginApi : loginApi;
+    const api = isElectron ? userMq : loginApi;
     const { data } = await api.loginApi({ username, password });
     if (!data) {
       ElMessage.error('该用户名不存在！');
@@ -43,7 +43,7 @@ export const useUserStore = defineStore('user', () => {
 
   /** 获取用户详情 */
   const getInfo = async (userToken: string) => {
-    const api = isElectron ? loginApi : loginApi;
+    const api = isElectron ? userMq : loginApi;
     const { data } = await api.getUserInfoApi(userToken);
     if (!data) {
       ElMessage.error('该用户信息不存在！');
@@ -56,7 +56,7 @@ export const useUserStore = defineStore('user', () => {
     roleIds.value = data.roleIds || []; // roleIds: 1最高权限
 
     // 获取项目信息
-    const proApi = isElectron ? projectApi : projectApi;
+    const proApi = isElectron ? projectMq : projectApi;
     const res = await proApi.getProjectList(Number(userId.value));
     projectList.value = res.data;
 

@@ -2,7 +2,7 @@
 import { Search, Refresh } from '@element-plus/icons-vue';
 import { ref, reactive, onMounted } from 'vue';
 import { userApi } from '@/api/user';
-import { mqUserApi } from '@/mysql/user';
+import { userMq } from '@/mysql/user';
 import Pagination from '@/components/Pagination/index.vue';
 import type { UserModel, UserListParams } from '@/api/types/user';
 import { ElMessage, ElMessageBox } from 'element-plus';
@@ -30,7 +30,7 @@ const getList = async () => {
   if (activeTab.value === 'api') {
     res = await userApi.getUserList(listQuery);
   } else {
-    res = await mqUserApi.getUserList(listQuery);
+    res = await userMq.getUserList(listQuery);
   }
   const { data } = res;
   listLoading.value = false;
