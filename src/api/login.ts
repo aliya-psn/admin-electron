@@ -8,7 +8,7 @@ export function loginApi(_data: Login.LoginRequestData) {
       code: 200,
       message: 'success',
       data: {
-        token: 'c7bab56320a34dceaea1'
+        token: 'b5ffd319bfd64bdb943c'
       }
     });
   });
