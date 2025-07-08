@@ -1,3 +1,19 @@
+// 🔧 Windows 编码初始化 - 必须在所有导入之前执行
+if (process.platform === 'win32') {
+  // 设置进程编码
+  process.env.NODE_OPTIONS = '--max-old-space-size=4096';
+  process.env.LANG = 'zh_CN.UTF-8';
+  process.env.LC_ALL = 'zh_CN.UTF-8';
+  
+  // 强制设置标准输出编码
+  if (process.stdout.setDefaultEncoding) {
+    process.stdout.setDefaultEncoding('utf8');
+  }
+  if (process.stderr.setDefaultEncoding) {
+    process.stderr.setDefaultEncoding('utf8');
+  }
+}
+
 import {
   app,
   BrowserWindow,
@@ -18,21 +34,15 @@ import mysql from 'mysql2';
 import { exec } from 'child_process';
 import { logger } from './logger.js';
 
-// 设置控制台输出编码为 UTF-8，解决中文乱码问题
-if (process.platform === 'win32') {
-  process.stdout.setDefaultEncoding && process.stdout.setDefaultEncoding('utf8');
-  process.stderr.setDefaultEncoding && process.stderr.setDefaultEncoding('utf8');
-
-  // 设置 Windows 控制台代码页为 UTF-8
-  if (process.env.NODE_ENV === 'development') {
-    exec('chcp 65001', error => {
-      if (error) {
-        logger.error('设置控制台编码失败:', error.message);
-      } else {
-        logger.log('控制台编码已设置为 UTF-8');
-      }
-    });
-  }
+// Windows 控制台代码页设置（开发环境）
+if (process.platform === 'win32' && process.env.NODE_ENV === 'development') {
+  exec('chcp 65001', { encoding: 'utf8' }, error => {
+    if (error) {
+      logger.error('设置控制台代码页失败:', error.message);
+    } else {
+      logger.log('✓ 控制台代码页已设置为 UTF-8 (65001)');
+    }
+  });
 }
 
 const __filename = fileURLToPath(import.meta.url);
