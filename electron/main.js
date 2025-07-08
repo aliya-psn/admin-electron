@@ -444,8 +444,12 @@ ipcMain.handle('window-operations', async (event, operation, ...args) => {
 ipcMain.handle('mysql-query', async (event, sql, params) => {
   return new Promise((resolve, reject) => {
     mysqlPool.query(sql, params, (err, results) => {
-      if (err) reject(err);
-      else resolve(results);
+      if (err) {
+        console.log('请求数据库失败');
+        reject(err);
+      } else {
+        resolve(results);
+      }
     });
   });
 });

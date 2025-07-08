@@ -1,4 +1,6 @@
 import type { UserListParams, UserListData } from '../api/types/user';
+import type * as Login from '../api/types/login';
+
 import { mysqlQuery } from '@/service/mysql';
 import { formatMysqlResult } from './util';
 
@@ -13,6 +15,49 @@ function attachRoles(list: any[]) {
 }
 
 export const mqUserApi = {
+  // 登录
+  async loginApi(data: Login.LoginRequestData) {
+    const sql = 'SELECT COUNT(*) as count FROM user WHERE username = ?';
+    const res = await mysqlQuery(sql, [data.username]);
+    const count = Array.isArray(res) && res.length ? res[0].count : 0;
+    return count > 0
+      ? {
+          data: {
+            token: data.username,
+            username: data.username
+          }
+        }
+      : {
+          data: null
+        };
+  },
+
+  // 获取用户信息
+  async getUserInfoApi(userToken: string) {
+    // 查询用户基本信息
+    const userSql = 'SELECT id, username, nickname FROM user WHERE username = ? LIMIT 1';
+    const userRes = await mysqlQuery(userSql, [userToken]);
+
+    if (!Array.isArray(userRes) || userRes.length === 0) {
+      return {
+        data: null
+      };
+    }
+    const { id, username, nickname } = userRes[0];
+    // 查询用户角色ID
+    const roleSql = 'SELECT role_id FROM sys_user_role WHERE user_id = ?';
+    const roleRes = await mysqlQuery(roleSql, [id]);
+    const roleIds = Array.isArray(roleRes) ? roleRes.map((item: any) => item.role_id) : [];
+    return {
+      data: {
+        userId: id,
+        username,
+        nickname,
+        roleIds
+      }
+    };
+  },
+
   // mysql 查询用户列表带分页和条件
   async getUserList(_param: UserListParams): Promise<UserListData> {
     const { pageNum, pageSize, roleName = '', username = '', nickname = '' } = _param;

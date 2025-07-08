@@ -14,7 +14,6 @@ export type UserInfoResponseData = ApiResponseData<{
   username: string;
   nickname: string;
   userId: Number;
-  admin: Number; // 是否是管理员
 
   roleIds: Array<Number>; // 角色
 }>;

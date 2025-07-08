@@ -5,17 +5,20 @@ import { useTagsViewStore } from './tags-view';
 import { useSettingsStore } from './settings';
 import { getToken, removeToken, setToken } from '@/utils/token-storage';
 import { resetRouter } from '@/router';
-import { loginApi, getUserInfoApi } from '@/api/login';
+import { mqUserApi } from '@/mysql/user';
+import { loginApi } from '@/api/login';
 import { projectApi } from '@/api/project';
+import { projectMq } from '@/mysql/project';
 import { type LoginRequestData } from '@/api/types/login';
 import { ProjectSelectModel } from '@/api/types/project';
+import { ElMessage } from 'element-plus';
+import { isElectron } from '@/utils';
 
 export const useUserStore = defineStore('user', () => {
   const token = ref<string>(getToken() || '');
   const username = ref<string>('');
   const nickname = ref<string>('');
   const userId = ref<Number>();
-  const admin = ref<Number>(0); // 是否是管理员
 
   const roleIds = ref<Array<Number>>([]); // 角色
   const menus = ref<Array<string>>([]); // 菜单
@@ -28,22 +31,33 @@ export const useUserStore = defineStore('user', () => {
 
   /** 登录 */
   const login = async ({ username, password }: LoginRequestData) => {
-    const { data } = await loginApi({ username, password });
+    const api = isElectron ? mqUserApi : loginApi;
+    const { data } = await api.loginApi({ username, password });
+    if (!data) {
+      ElMessage.error('该用户名不存在！');
+      return;
+    }
     setToken(data.token);
     token.value = data.token;
   };
 
   /** 获取用户详情 */
-  const getInfo = async () => {
-    const { data } = await getUserInfoApi();
+  const getInfo = async (userToken: string) => {
+    const api = isElectron ? mqUserApi : loginApi;
+    const { data } = await api.getUserInfoApi(userToken);
+    if (!data) {
+      ElMessage.error('该用户信息不存在！');
+      logout();
+      return;
+    }
     username.value = data.username;
     nickname.value = data.nickname;
     userId.value = data.userId;
-    admin.value = data.admin;
     roleIds.value = data.roleIds || []; // roleIds: 1最高权限
 
     // 获取项目信息
-    const res = await projectApi.getProjectList(Number(userId.value));
+    const proApi = isElectron ? projectMq : projectApi;
+    const res = await proApi.getProjectList(Number(userId.value));
     projectList.value = res.data;
 
     // 菜单权限，如果不需要动态控制，可以在 permission.ts中设置为全部，这里可不写
@@ -74,7 +88,6 @@ export const useUserStore = defineStore('user', () => {
     token,
     username,
     nickname,
-    admin,
     projectList,
     menus,
     permissions,

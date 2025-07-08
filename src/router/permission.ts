@@ -15,14 +15,14 @@ router.beforeEach(async (to, _from, next) => {
   console.log('Router beforeEach triggered', { to, _from });
   NProgress.start();
 
-  const hasToken = await getToken();
+  const userToken = await getToken();
 
   if (to.path === '/login') {
     next();
     return;
   }
 
-  if (hasToken) {
+  if (userToken) {
     if (to.path === '/') {
       next('/dashboard');
       return;
@@ -33,7 +33,7 @@ router.beforeEach(async (to, _from, next) => {
 
     if (!userStore.username) {
       try {
-        await userStore.getInfo();
+        await userStore.getInfo(userToken);
         // 菜单权限 生成可访问的 Routes
         const menus = userStore.menus;
         permissionStore.setRoutes(menus);

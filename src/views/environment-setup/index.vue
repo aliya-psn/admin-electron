@@ -905,7 +905,7 @@ onMounted(async () => {
     background-color: #f0f9ff;
     border-radius: 6px;
     border-left: 4px solid #67c23a;
-    margin-bottom: 16px;
+    margin-bottom: 10px;
 
     h4 {
       margin: 0 0 8px 0 !important;
