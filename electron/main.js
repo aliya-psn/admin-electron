@@ -16,15 +16,16 @@ import fs from 'fs';
 import os from 'os';
 import mysql from 'mysql2';
 import { exec } from 'child_process';
+import { logger } from './logger.js';
 
 // 设置控制台输出编码为 UTF-8，解决中文乱码问题
 if (process.platform === 'win32') {
   process.stdout.setDefaultEncoding && process.stdout.setDefaultEncoding('utf8');
   process.stderr.setDefaultEncoding && process.stderr.setDefaultEncoding('utf8');
-  
+
   // 设置 Windows 控制台代码页为 UTF-8
   if (process.env.NODE_ENV === 'development') {
-    exec('chcp 65001', (error) => {
+    exec('chcp 65001', error => {
       if (error) {
         logger.error('设置控制台编码失败:', error.message);
       } else {
@@ -33,54 +34,6 @@ if (process.platform === 'win32') {
     });
   }
 }
-
-// 增强的控制台日志函数，确保中文正确显示
-const logger = {
-  log: (...args) => {
-    const timestamp = new Date().toLocaleString('zh-CN');
-    const message = args.map(arg => 
-      typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-    ).join(' ');
-    
-    if (process.platform === 'win32') {
-      // Windows 下使用 Buffer 确保 UTF-8 编码
-      const buffer = Buffer.from(`[${timestamp}] ${message}\n`, 'utf8');
-      process.stdout.write(buffer);
-    } else {
-      console.log(`[${timestamp}]`, ...args);
-    }
-  },
-  
-  error: (...args) => {
-    const timestamp = new Date().toLocaleString('zh-CN');
-    const message = args.map(arg => 
-      typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-    ).join(' ');
-    
-    if (process.platform === 'win32') {
-      // Windows 下使用 Buffer 确保 UTF-8 编码
-      const buffer = Buffer.from(`[${timestamp}] ERROR: ${message}\n`, 'utf8');
-      process.stderr.write(buffer);
-    } else {
-      console.error(`[${timestamp}] ERROR:`, ...args);
-    }
-  },
-  
-  warn: (...args) => {
-    const timestamp = new Date().toLocaleString('zh-CN');
-    const message = args.map(arg => 
-      typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-    ).join(' ');
-    
-    if (process.platform === 'win32') {
-      // Windows 下使用 Buffer 确保 UTF-8 编码
-      const buffer = Buffer.from(`[${timestamp}] WARN: ${message}\n`, 'utf8');
-      process.stdout.write(buffer);
-    } else {
-      console.warn(`[${timestamp}] WARN:`, ...args);
-    }
-  }
-};
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -97,13 +50,13 @@ const mysqlPool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
-  acquireTimeout: 30000,        // 获取连接超时时间 30秒
-  timeout: 60000,               // 查询超时时间 60秒
-  reconnect: true,              // 自动重连
-  idleTimeout: 60000,           // 空闲连接超时时间 1分钟
-  maxIdle: 10,                  // 最大空闲连接数
-  enableKeepAlive: true,        // 启用心跳包
-  keepAliveInitialDelay: 0      // 心跳包初始延迟
+  acquireTimeout: 30000, // 获取连接超时时间 30秒
+  timeout: 60000, // 查询超时时间 60秒
+  reconnect: true, // 自动重连
+  idleTimeout: 60000, // 空闲连接超时时间 1分钟
+  maxIdle: 10, // 最大空闲连接数
+  enableKeepAlive: true, // 启用心跳包
+  keepAliveInitialDelay: 0 // 心跳包初始延迟
 });
 
 // 数据库连接健康检查
@@ -537,21 +490,23 @@ ipcMain.handle('mysql-query', async (event, sql, params = []) => {
   if (!sql || typeof sql !== 'string') {
     throw new Error('SQL 语句不能为空且必须是字符串');
   }
-  
+
   if (!Array.isArray(params)) {
     throw new Error('参数必须是数组类型');
   }
-  
-  logger.log('执行 SQL 查询:', { sql: sql.substring(0, 100) + (sql.length > 100 ? '...' : ''), paramsLength: params.length });
-  
+
+  logger.log('执行 SQL 查询:', {
+    sql: sql.substring(0, 100) + (sql.length > 100 ? '...' : ''),
+    paramsLength: params.length
+  });
+
   try {
     // 使用 Promise 化的 mysql2 接口
     const promisePool = mysqlPool.promise();
     const [results, fields] = await promisePool.execute(sql, params);
-    
+
     logger.log('SQL 查询成功，返回 ' + (Array.isArray(results) ? results.length : 1) + ' 条记录');
     return results;
-    
   } catch (error) {
     // 详细的错误日志
     logger.error('数据库查询失败:', {
@@ -562,14 +517,14 @@ ipcMain.handle('mysql-query', async (event, sql, params = []) => {
       sqlState: error.sqlState,
       sqlMessage: error.sqlMessage
     });
-    
+
     // 抛出错误，让渲染进程处理
     throw error;
   }
 });
 
 // 获取数据库连接状态
-ipcMain.handle('mysql-status', async (event) => {
+ipcMain.handle('mysql-status', async event => {
   try {
     const isConnected = await checkDatabaseConnection();
     const poolStatus = {
@@ -579,7 +534,7 @@ ipcMain.handle('mysql-status', async (event) => {
       connectionLimit: mysqlPool.config.connectionLimit,
       queueLength: mysqlPool._connectionQueue ? mysqlPool._connectionQueue.length : 0
     };
-    
+
     return {
       success: true,
       connected: isConnected,
