@@ -4,7 +4,7 @@ if (process.platform === 'win32') {
   process.env.NODE_OPTIONS = '--max-old-space-size=4096';
   process.env.LANG = 'zh_CN.UTF-8';
   process.env.LC_ALL = 'zh_CN.UTF-8';
-  
+
   // 强制设置标准输出编码
   if (process.stdout.setDefaultEncoding) {
     process.stdout.setDefaultEncoding('utf8');

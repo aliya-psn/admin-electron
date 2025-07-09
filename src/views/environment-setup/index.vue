@@ -16,7 +16,6 @@
               </div>
             </div>
             <p>引导您安装和配置Python、Appium等自动化测试必需的环境</p>
-
           </div>
           <div class="header-actions">
             <el-button type="warning" @click="checkAllEnvironments">
@@ -46,8 +45,12 @@
           </div>
         </template>
         <div class="status-grid">
-          <div v-for="item in environmentItems" :key="item.name" class="status-item"
-            :class="{ 'status-checking': item.checking }">
+          <div
+            v-for="item in environmentItems"
+            :key="item.name"
+            class="status-item"
+            :class="{ 'status-checking': item.checking }"
+          >
             <div class="status-icon">
               <el-icon v-if="item.checking" class="loading-icon">
                 <Loading />
@@ -70,12 +73,21 @@
               <div class="description">{{ item.description }}</div>
             </div>
             <div class="status-actions">
-              <el-button size="small" :type="item.status === 'success' ? 'success' : 'primary'"
-                @click="handleActionButtonClick(item)" :loading="item.checking" :disabled="item.checking">
+              <el-button
+                size="small"
+                :type="item.status === 'success' ? 'success' : 'primary'"
+                @click="handleActionButtonClick(item)"
+                :loading="item.checking"
+                :disabled="item.checking"
+              >
                 {{ getActionButtonText(item) }}
               </el-button>
-              <el-button size="small" @click="checkEnvironment(item)" :loading="item.checking"
-                :disabled="item.installing">
+              <el-button
+                size="small"
+                @click="checkEnvironment(item)"
+                :loading="item.checking"
+                :disabled="item.installing"
+              >
                 重新检测
               </el-button>
             </div>
@@ -99,8 +111,11 @@
                   <el-input readonly :value="item.checkCommand" class="command-input">
                     <template #append>
                       <el-button @click="copyCommand(item.checkCommand)">复制</el-button>
-                      <el-button type="success" @click="executeCommand(item.checkCommand)"
-                        :loading="item.checkCommand === executingCommand">
+                      <el-button
+                        type="success"
+                        @click="executeCommand(item.checkCommand)"
+                        :loading="item.checkCommand === executingCommand"
+                      >
                         检测
                       </el-button>
                     </template>
@@ -110,7 +125,12 @@
               <div class="guide-steps">
                 <h4>安装步骤：</h4>
                 <ol>
-                  <li v-for="step in item.installSteps" :key="step" class="install-step" v-html="formatStepWithLinks(step)"></li>
+                  <li
+                    v-for="step in item.installSteps"
+                    :key="step"
+                    class="install-step"
+                    v-html="formatStepWithLinks(step)"
+                  />
                 </ol>
               </div>
               <div class="guide-commands" v-if="item.installCommands && item.installCommands.length > 0">
@@ -149,11 +169,11 @@
           <div class="result-command"><strong>命令：</strong>{{ commandResult.command }}</div>
           <div class="result-status">
             <strong>状态：</strong>
-            <el-tag :type="commandResult.success === null ? 'warning' : (commandResult.success ? 'success' : 'danger')">
+            <el-tag :type="commandResult.success === null ? 'warning' : commandResult.success ? 'success' : 'danger'">
               <el-icon v-if="commandResult.success === null" class="mr-1 loading-icon">
                 <Loading />
               </el-icon>
-              {{ commandResult.success === null ? '执行中' : (commandResult.success ? '成功' : '失败') }}
+              {{ commandResult.success === null ? '执行中' : commandResult.success ? '成功' : '失败' }}
             </el-tag>
           </div>
           <div class="result-output" v-if="commandResult.stdout">
@@ -174,8 +194,10 @@
         <div class="progress-header">
           <div class="progress-info">
             <span>安装进度：{{ installDialog.currentStep }} / {{ installDialog.totalSteps }}</span>
-            <el-progress :percentage="Math.round((installDialog.currentStep / installDialog.totalSteps) * 100)"
-              :status="installDialog.currentStep === installDialog.totalSteps ? 'success' : undefined" />
+            <el-progress
+              :percentage="Math.round((installDialog.currentStep / installDialog.totalSteps) * 100)"
+              :status="installDialog.currentStep === installDialog.totalSteps ? 'success' : undefined"
+            />
           </div>
           <div class="current-command" v-if="installDialog.currentCommand">
             <strong>当前执行：</strong>
@@ -211,8 +233,10 @@
       </div>
 
       <template #footer>
-        <el-button @click="closeInstallDialog"
-          :type="installDialog.currentStep === installDialog.totalSteps ? 'primary' : 'default'">
+        <el-button
+          @click="closeInstallDialog"
+          :type="installDialog.currentStep === installDialog.totalSteps ? 'primary' : 'default'"
+        >
           {{ installDialog.currentStep === installDialog.totalSteps ? '完成' : '最小化' }}
         </el-button>
       </template>
@@ -280,25 +304,25 @@ function generateEnvironmentItems(platform: string): EnvironmentItem[] {
           : ['sudo apt update', 'sudo apt install python3 python3-pip', 'python3 -m pip install --upgrade pip'],
       installSteps: isWindows
         ? [
-          '从官网下载Python 3.11或更高版本',
-          '运行安装程序，确保勾选"Add Python to PATH"',
-          '验证安装：打开命令提示符输入 python --version',
-          '更新pip到最新版本'
-        ]
-        : isMac
-          ? [
-            '确保已安装Homebrew (https://brew.sh)',
-            '运行 brew install python@3.11',
-            '验证安装：python3 --version',
+            '从官网下载Python 3.11或更高版本',
+            '运行安装程序，确保勾选"Add Python to PATH"',
+            '验证安装：打开命令提示符输入 python --version',
             '更新pip到最新版本'
           ]
+        : isMac
+          ? [
+              '确保已安装Homebrew (https://brew.sh)',
+              '运行 brew install python@3.11',
+              '验证安装：python3 --version',
+              '更新pip到最新版本'
+            ]
           : ['更新系统包管理器', '安装Python3和pip', '验证安装：python3 --version', '更新pip到最新版本'],
       notes: isWindows
         ? [
-          '推荐安装Python 3.11或更高版本',
-          '安装时必须勾选"Add Python to PATH"选项',
-          '如果已安装但检测失败，请检查环境变量配置'
-        ]
+            '推荐安装Python 3.11或更高版本',
+            '安装时必须勾选"Add Python to PATH"选项',
+            '如果已安装但检测失败，请检查环境变量配置'
+          ]
         : isMac
           ? ['推荐使用Homebrew安装Python', '确保PATH环境变量包含Python路径', 'macOS自带Python2，建议安装Python3']
           : ['推荐安装Python 3.11或更高版本', '确保python3和pip3命令可用', '可能需要配置别名或符号链接'],
@@ -383,20 +407,18 @@ function generateEnvironmentItems(platform: string): EnvironmentItem[] {
           : ['sudo apt update', 'sudo apt install android-tools-adb'],
       installSteps: isWindows
         ? [
-          '前往Android官方网站下载Platform Tools：https://developer.android.com/studio/releases/platform-tools',
-          '点击"Download SDK Platform-Tools for Windows"下载压缩包',
-          '解压下载的zip文件到合适目录，例如：C:\\platform-tools',
-          '配置环境变量（推荐）：\n• 在Windows搜索框输入"环境变量"\n• 选择"编辑系统环境变量"\n• 点击"环境变量..."\n• 在"系统变量"中找到Path，点击"编辑"\n• 点击"新建"，添加：C:\\platform-tools\n• 确认保存所有设置',
-          '重新打开命令提示符或PowerShell',
-          '验证安装：输入 adb version 命令'
-        ]
+            '前往Android官方网站下载Platform Tools：https://developer.android.com/studio/releases/platform-tools',
+            '点击"Download SDK Platform-Tools for Windows"下载压缩包',
+            '解压下载的zip文件到合适目录，例如：C:\\platform-tools',
+            '配置环境变量（推荐）：\n• 在Windows搜索框输入"环境变量"\n• 选择"编辑系统环境变量"\n• 点击"环境变量..."\n• 在"系统变量"中找到Path，点击"编辑"\n• 点击"新建"，添加：C:\\platform-tools\n• 确认保存所有设置',
+            '重新打开命令提示符或PowerShell',
+            '验证安装：输入 adb version 命令'
+          ]
         : isMac
           ? ['使用Homebrew安装：brew install android-platform-tools', '验证安装：adb version']
           : ['更新包管理器', '安装android-tools-adb包', '验证安装：adb version'],
       notes: isWindows
-        ? [
-          '配置环境变量后可在任何目录使用adb命令，如果不配置环境变量，需要在platform-tools目录下使用adb命令'
-        ]
+        ? ['配置环境变量后可在任何目录使用adb命令，如果不配置环境变量，需要在platform-tools目录下使用adb命令']
         : ['推荐使用包管理器安装ADB', '确保命令行可以直接使用adb命令'],
       status: 'unknown',
       checking: false,
@@ -414,11 +436,11 @@ function generateEnvironmentItems(platform: string): EnvironmentItem[] {
           : ['sudo apt update', 'sudo apt install openjdk-17-jdk'],
       installSteps: isWindows
         ? [
-          '下载并安装JDK 17或更高版本',
-          '配置JAVA_HOME环境变量',
-          '将%JAVA_HOME%\\bin添加到PATH',
-          '验证安装：java -version'
-        ]
+            '下载并安装JDK 17或更高版本',
+            '配置JAVA_HOME环境变量',
+            '将%JAVA_HOME%\\bin添加到PATH',
+            '验证安装：java -version'
+          ]
         : isMac
           ? ['使用Homebrew安装：brew install openjdk@17', '配置JAVA_HOME环境变量', '验证安装：java -version']
           : ['更新包管理器', '安装OpenJDK 17', '配置JAVA_HOME环境变量', '验证安装：java -version'],
@@ -547,7 +569,7 @@ async function checkEnvironment(item: EnvironmentItem) {
     if (result.success) {
       // 检查stdout或stderr中的版本信息
       const outputText = result.stdout || result.stderr || '';
-      
+
       // 如果有输出内容或者命令执行成功，视为安装成功
       if (outputText.trim()) {
         item.status = 'success';
@@ -740,7 +762,7 @@ function clearResult() {
 function formatStepWithLinks(step: string): string {
   // URL正则表达式
   const urlRegex = /(https?:\/\/[^\s]+)/g;
-  
+
   // 替换URL为可点击的链接
   return step.replace(urlRegex, '<a href="$1" target="_blank" class="step-link">$1</a>');
 }
