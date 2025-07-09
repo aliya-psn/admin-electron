@@ -25,7 +25,7 @@
                 </el-icon>
                 配置环境
               </el-button>
-              <el-button type="default" size="small" @click="refreshDevices">
+              <el-button type="default" size="small" @click="refreshDevices(true)">
                 <el-icon class="mr-1">
                   <Refresh />
                 </el-icon>
@@ -67,7 +67,7 @@
               <el-button
                 type="primary"
                 text
-                @click="refreshDevices"
+                @click="refreshDevices(true)"
                 :loading="deviceLoading"
                 :disabled="adbStatus !== 'success' && iosStatus !== 'success'"
               >
@@ -265,7 +265,7 @@
             </div>
             <div class="step-item">
               <span class="step-number">2</span>
-              <span class="step-text">Windows: 下载预编译版本或使用WSL</span>
+              <span class="step-text">Windows: 安装WSL后使用 sudo apt install libimobiledevice6</span>
             </div>
             <div class="step-item">
               <span class="step-number">3</span>
@@ -421,29 +421,38 @@ const APP_INSTALL_DEFAULTS = {
   fallbackPackage: 'com.unknown.app'
 } as const;
 
+// ===== 获取平台特定命令的函数 =====
+function getPlatformCommand(baseCommand: string): string {
+  const platform = navigator.platform.toLowerCase();
+  if (platform.includes('win')) {
+    return `wsl ${baseCommand}`;
+  }
+  return baseCommand;
+}
+
 // ===== Shell 指令常量/方法集中管理 =====
 const SHELL_COMMANDS = {
   // 环境检测
   adbVersion: 'adb version',
-  iosVersion: 'idevice_id --version',
+  iosVersion: getPlatformCommand('idevice_id --version'),
   // 设备列表
   androidListDevices: 'adb devices -l',
-  iosListDevices: 'idevice_id -l',
+  iosListDevices: getPlatformCommand('idevice_id -l'),
   // Android 设备详细
   androidGetApiLevel: (deviceId: string) => `adb -s ${deviceId} shell getprop ro.build.version.sdk`,
   androidGetCpu: (deviceId: string) => `adb -s ${deviceId} shell getprop ro.product.cpu.abi`,
   androidGetModel: (deviceId: string) => `adb -s ${deviceId} shell getprop ro.product.model`,
   // iOS 设备详细
-  iosGetApiLevel: (deviceId: string) => `ideviceinfo -u ${deviceId} -k ProductVersion`,
-  iosGetCpu: (deviceId: string) => `ideviceinfo -u ${deviceId} -k CPUArchitecture`,
-  iosGetModel: (deviceId: string) => `ideviceinfo -u ${deviceId} -k ProductType`,
-  iosGetName: (deviceId: string) => `ideviceinfo -u ${deviceId} -k DeviceName`,
+  iosGetApiLevel: (deviceId: string) => getPlatformCommand(`ideviceinfo -u ${deviceId} -k ProductVersion`),
+  iosGetCpu: (deviceId: string) => getPlatformCommand(`ideviceinfo -u ${deviceId} -k CPUArchitecture`),
+  iosGetModel: (deviceId: string) => getPlatformCommand(`ideviceinfo -u ${deviceId} -k ProductType`),
+  iosGetName: (deviceId: string) => getPlatformCommand(`ideviceinfo -u ${deviceId} -k DeviceName`),
   // Android 应用相关
   androidListPackages: (deviceId: string) => `adb -s ${deviceId} shell pm list packages`,
   androidPackageVersion: (deviceId: string, pkg: string) =>
     `adb -s ${deviceId} shell dumpsys package ${pkg} | grep versionName`,
   // iOS 应用相关
-  iosListApps: (deviceId: string) => `ideviceinstaller -u ${deviceId} -l`,
+  iosListApps: (deviceId: string) => getPlatformCommand(`ideviceinstaller -u ${deviceId} -l`),
   // APK 解析
   parseApk: (apkPath: string) => `aapt dump badging "${apkPath}"`,
   // Android 安装 APK
@@ -451,7 +460,7 @@ const SHELL_COMMANDS = {
   // Android 检查连接
   androidCheckConnection: 'adb devices',
   // iOS 检查连接
-  iosCheckConnection: 'idevice_id -l'
+  iosCheckConnection: getPlatformCommand('idevice_id -l')
 };
 
 // ===== 环境检测相关配置（恢复原始定义） =====
@@ -462,7 +471,7 @@ const ENVIRONMENT_CONFIG = {
     name: 'Android ADB'
   },
   ios: {
-    checkCommand: 'idevice_id --version',
+    checkCommand: getPlatformCommand('idevice_id --version'),
     versionRegex: /idevice_id (\d+\.\d+\.\d+)/,
     name: 'iOS libimobiledevice'
   }
@@ -478,12 +487,12 @@ const DEVICE_COMMANDS = {
     getName: undefined
   },
   ios: {
-    listDevices: 'idevice_id -l',
-    checkConnection: 'idevice_id -l',
-    getApiLevel: (deviceId: string) => `ideviceinfo -u ${deviceId} -k ProductVersion`,
-    getCpu: (deviceId: string) => `ideviceinfo -u ${deviceId} -k CPUArchitecture`,
-    getModel: (deviceId: string) => `ideviceinfo -u ${deviceId} -k ProductType`,
-    getName: (deviceId: string) => `ideviceinfo -u ${deviceId} -k DeviceName`
+    listDevices: getPlatformCommand('idevice_id -l'),
+    checkConnection: getPlatformCommand('idevice_id -l'),
+    getApiLevel: (deviceId: string) => getPlatformCommand(`ideviceinfo -u ${deviceId} -k ProductVersion`),
+    getCpu: (deviceId: string) => getPlatformCommand(`ideviceinfo -u ${deviceId} -k CPUArchitecture`),
+    getModel: (deviceId: string) => getPlatformCommand(`ideviceinfo -u ${deviceId} -k ProductType`),
+    getName: (deviceId: string) => getPlatformCommand(`ideviceinfo -u ${deviceId} -k DeviceName`)
   }
 } as const;
 
@@ -658,6 +667,7 @@ async function checkEnvironment(
   statusRef.value = 'checking';
 
   const result = await executeCommand(config.checkCommand, `${config.name}环境检测失败`);
+  console.log('***result**', result);
 
   if (result.success && result.stdout) {
     statusRef.value = 'success';
@@ -853,11 +863,23 @@ async function refreshPlatformDevices(platform: 'android' | 'ios'): Promise<Devi
 }
 
 // 刷新所有设备列表
-async function refreshDevices(): Promise<void> {
+async function refreshDevices(forceCheckEnvironment?: boolean): Promise<void> {
   deviceLoading.value = true;
 
   try {
-    const [isAdbAvailable, isIosAvailable] = await Promise.all([checkAdbEnvironment(), checkIosEnvironment()]);
+    let isAdbAvailable: boolean;
+    let isIosAvailable: boolean;
+
+    if (forceCheckEnvironment) {
+      // 强制重新检查环境状态
+      const [adbResult, iosResult] = await Promise.all([checkAdbEnvironment(), checkIosEnvironment()]);
+      isAdbAvailable = adbResult;
+      isIosAvailable = iosResult;
+    } else {
+      // 使用已缓存的环境状态，避免重复检查
+      isAdbAvailable = adbStatus.value === 'success';
+      isIosAvailable = iosStatus.value === 'success';
+    }
 
     const allDevices: DeviceInfo[] = [];
     let androidDeviceCount = 0;
@@ -1202,7 +1224,7 @@ onMounted(async () => {
 
   // 如果任一环境可用，则尝试获取设备列表
   if (isAdbAvailable || isIosAvailable) {
-    refreshDevices();
+    refreshDevices(false); // 使用缓存的环境状态
   }
 });
 
@@ -1354,9 +1376,8 @@ watch(
       }
 
       .env-version {
-        font-size: 12px;
-        color: #909399;
-        margin-bottom: 8px;
+        font-size: 13px !important;
+        color: #e6a23c !important;
       }
     }
   }

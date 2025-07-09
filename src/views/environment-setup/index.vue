@@ -453,8 +453,8 @@ const ENVIRONMENT_CONFIGS: EnvironmentConfig[] = [
     name: 'Appium Python Client',
     description: 'Appium的Python客户端库',
     checkCommand: {
-      win32: 'python -c "import appium; print(f\'appium {appium.__version__}\')" 2>nul || echo "模块未安装"',
-      darwin: 'python3 -c "import appium; print(f\'appium {appium.__version__}\')" 2>/dev/null || echo "模块未安装"'
+      win32: 'python -c "import appium; print(f\'appium {appium.__version__}\')"',
+      darwin: 'python3 -c "import appium; print(f\'appium {appium.__version__}\')"'
     },
     installCommands: {
       win32: ['pip install Appium-Python-Client'],
@@ -531,19 +531,58 @@ const ENVIRONMENT_CONFIGS: EnvironmentConfig[] = [
     }
   },
   {
+    key: 'wsl',
+    name: 'WSL (Windows Subsystem for Linux)',
+    description: 'Windows Linux子系统 (iOS工具支持必需)',
+    checkCommand: {
+      win32: 'wsl --version',
+      darwin: 'echo "平台不支持"'
+    },
+    installCommands: {
+      win32: [], // Windows需要手动安装
+      darwin: []
+    },
+    installSteps: {
+      win32: [
+        '以管理员身份打开PowerShell',
+        '运行命令：wsl --install',
+        '重启计算机',
+        '首次启动WSL时会要求创建Linux用户账户',
+        '验证安装：wsl --version'
+      ],
+      darwin: []
+    },
+    notes: {
+      win32: [
+        'WSL允许在Windows上运行Linux环境',
+        'iOS开发工具需要Linux环境支持',
+        '安装后需要重启计算机',
+        '建议安装Ubuntu发行版',
+        '安装过程需要重启计算机，请确保保存所有工作'
+      ],
+      darwin: []
+    },
+    unsupportedPlatforms: ['darwin']
+  },
+  {
     key: 'libimobiledevice',
     name: 'libimobiledevice',
     description: 'iOS设备通信库 (iOS设备检测必需)',
     checkCommand: {
-      win32: 'echo "平台不支持"',
-      darwin: 'idevice_id --version 2>/dev/null || echo "未安装"'
+      win32: 'wsl idevice_id',
+      darwin: 'idevice_id'
     },
     installCommands: {
-      win32: [],
+      win32: [], // Windows需要手动安装
       darwin: ['brew install libimobiledevice', 'brew install ideviceinstaller']
     },
     installSteps: {
-      win32: [],
+      win32: [
+        '确保已安装并启用WSL（Windows Subsystem for Linux）',
+        '在WSL中更新包管理器：sudo apt update',
+        '安装libimobiledevice：sudo apt install -y libimobiledevice6 libimobiledevice-utils ideviceinstaller',
+        '验证安装：wsl idevice_id --version'
+      ],
       darwin: [
         '安装libimobiledevice：brew install libimobiledevice',
         '安装iOS应用安装工具：brew install ideviceinstaller',
@@ -551,25 +590,35 @@ const ENVIRONMENT_CONFIGS: EnvironmentConfig[] = [
       ]
     },
     notes: {
-      win32: [],
+      win32: [
+        '需要先安装WSL（Windows Subsystem for Linux）',
+        '在WSL中安装Ubuntu或其他Linux发行版',
+        '确保iOS设备已启用"信任此电脑"',
+        '首次连接设备时需要在设备上确认信任',
+        '使用wsl命令前缀在Windows中调用Linux工具',
+        '建议先安装WSL，然后在WSL环境中安装iOS工具'
+      ],
       darwin: ['确保iOS设备已启用"信任此电脑"', '首次连接设备时需要在设备上确认信任']
-    },
-    unsupportedPlatforms: ['win32']
+    }
   },
   {
     key: 'ios-deploy',
     name: 'ios-deploy',
     description: 'iOS应用部署工具 (可选)',
     checkCommand: {
-      win32: 'echo "平台不支持"',
-      darwin: 'ios-deploy --version 2>/dev/null || echo "未安装"'
+      win32: 'wsl ios-deploy --version',
+      darwin: 'ios-deploy --version'
     },
     installCommands: {
-      win32: [],
+      win32: [], // Windows需要手动安装
       darwin: ['npm install -g ios-deploy']
     },
     installSteps: {
-      win32: [],
+      win32: [
+        '确保已安装WSL和Node.js',
+        '在WSL中全局安装：npm install -g ios-deploy',
+        '验证安装：wsl ios-deploy --version'
+      ],
       darwin: [
         '确保已安装Node.js和npm',
         '全局安装：npm install -g ios-deploy',
@@ -577,10 +626,15 @@ const ENVIRONMENT_CONFIGS: EnvironmentConfig[] = [
       ]
     },
     notes: {
-      win32: [],
+      win32: [
+        '需要先安装WSL（Windows Subsystem for Linux）',
+        '在WSL中安装Node.js和npm',
+        '用于直接部署iOS应用到设备',
+        '使用wsl命令前缀在Windows中调用Linux工具',
+        '建议先安装WSL，然后在WSL环境中安装iOS工具'
+      ],
       darwin: ['需要Xcode命令行工具支持', '用于直接部署iOS应用到设备']
-    },
-    unsupportedPlatforms: ['win32']
+    }
   },
   {
     key: 'xcrun',
@@ -588,7 +642,7 @@ const ENVIRONMENT_CONFIGS: EnvironmentConfig[] = [
     description: 'iOS开发命令行工具',
     checkCommand: {
       win32: 'echo "平台不支持"',
-      darwin: 'xcrun --version 2>/dev/null || echo "未安装"'
+      darwin: 'xcrun --version'
     },
     installCommands: {
       win32: [],
@@ -614,15 +668,21 @@ const ENVIRONMENT_CONFIGS: EnvironmentConfig[] = [
     name: 'iOS设备连接测试',
     description: '测试是否能够检测到连接的iOS设备',
     checkCommand: {
-      win32: 'echo "平台不支持"',
-      darwin: 'idevice_id -l 2>/dev/null || echo "无设备连接"'
+      win32: 'wsl idevice_id -l',
+      darwin: 'idevice_id -l'
     },
     installCommands: {
       win32: [],
       darwin: []
     },
     installSteps: {
-      win32: [],
+      win32: [
+        '此项用于测试iOS设备连接状态',
+        '确保已在WSL中安装libimobiledevice工具',
+        '使用USB连接iOS设备',
+        '在iOS设备上信任此电脑',
+        '点击"重新检测"查看连接状态'
+      ],
       darwin: [
         '此项用于测试iOS设备连接状态',
         '确保已安装libimobiledevice工具',
@@ -632,10 +692,14 @@ const ENVIRONMENT_CONFIGS: EnvironmentConfig[] = [
       ]
     },
     notes: {
-      win32: [],
+      win32: [
+        '需要先安装WSL和libimobiledevice工具',
+        '首次连接需要在设备上确认信任',
+        '显示设备ID表示连接成功',
+        '使用wsl命令前缀在Windows中调用Linux工具'
+      ],
       darwin: ['需要先安装libimobiledevice工具', '首次连接需要在设备上确认信任', '显示设备ID表示连接成功']
-    },
-    unsupportedPlatforms: ['win32']
+    }
   }
 ];
 
