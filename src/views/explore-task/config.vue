@@ -48,7 +48,16 @@
               >
                 <el-option v-for="item in deviceList" :key="item.id" :label="item.name" :value="item.id">
                   <div class="device-option">
-                    <div class="device-name">{{ item.name }}</div>
+                    <div class="device-name">
+                      {{ item.name }}
+                      <el-tag 
+                        :type="getPlatformTagConfig(item.platform).type" 
+                        size="small" 
+                        class="platform-tag"
+                      >
+                        {{ getPlatformTagConfig(item.platform).text }}
+                      </el-tag>
+                    </div>
                     <div class="device-details">{{ item.model }} - API {{ item.apiLevel }}</div>
                   </div>
                 </el-option>
@@ -59,7 +68,6 @@
                 @click="refreshDevices"
                 :loading="deviceLoading"
                 :disabled="adbStatus !== 'success'"
-                title="刷新设备列表"
               >
                 <el-icon class="mr-1">
                   <Refresh />
@@ -159,8 +167,9 @@
         <!-- 环境状态卡片 -->
         <el-card class="info-card">
           <template #header>环境状态</template>
+          <!-- Android ADB环境 -->
           <div class="env-status-item">
-            <span>ADB工具：</span>
+            <span>ADB工具(Android)：</span>
             <el-tag
               :type="adbStatus === 'success' ? 'success' : adbStatus === 'checking' ? 'warning' : 'danger'"
               size="small"
@@ -168,7 +177,19 @@
               {{ adbStatusText }}
             </el-tag>
           </div>
-          <div v-if="adbVersion" class="env-version">版本：{{ adbVersion }}</div>
+          <div v-if="adbVersion" class="env-version">ADB版本：{{ adbVersion }}</div>
+          
+          <!-- iOS libimobiledevice环境 -->
+          <div class="env-status-item">
+            <span>libimobiledevice(iOS)：</span>
+            <el-tag
+              :type="iosStatus === 'success' ? 'success' : iosStatus === 'checking' ? 'warning' : 'danger'"
+              size="small"
+            >
+              {{ iosStatusText }}
+            </el-tag>
+          </div>
+          <div v-if="iosVersion" class="env-version">iOS工具版本：{{ iosVersion }}</div>
         </el-card>
 
         <el-card class="info-card" v-if="selectedApp">
@@ -186,6 +207,15 @@
           <div>设备标识：{{ selectedDevice.id }}</div>
           <div>设备名称：{{ selectedDevice.name }}</div>
           <div>设备型号：{{ selectedDevice.model }}</div>
+          <div>
+            设备平台：
+            <el-tag 
+              :type="getPlatformTagConfig(selectedDevice.platform).type" 
+              size="small"
+            >
+              {{ getPlatformTagConfig(selectedDevice.platform).text }}
+            </el-tag>
+          </div>
           <div>版本：{{ selectedDevice.apiLevel }}</div>
           <div>CPU类型：{{ selectedDevice.cpu }}</div>
         </el-card>
@@ -206,11 +236,11 @@
             <Tools />
           </el-icon>
         </div>
-        <h3>需要安装ADB工具</h3>
-        <p>为了进行Android设备管理和应用安装，需要先安装Android Debug Bridge (ADB)工具。</p>
+        <h3>需要安装开发工具</h3>
+        <p>为了进行设备管理和应用测试，需要安装相应的开发工具。</p>
 
         <div class="quick-install">
-          <h4>快速安装指南：</h4>
+          <h4>Android设备支持 - ADB工具：</h4>
           <div class="install-steps">
             <div class="step-item">
               <span class="step-number">1</span>
@@ -224,10 +254,27 @@
               <span class="step-number">3</span>
               <span class="step-text">将目录添加到系统PATH环境变量</span>
             </div>
+          </div>
+
+          <h4>iOS设备支持 - libimobiledevice工具：</h4>
+          <div class="install-steps">
             <div class="step-item">
-              <span class="step-number">4</span>
-              <span class="step-text">重启应用并验证安装</span>
+              <span class="step-number">1</span>
+              <span class="step-text">macOS: 使用 brew install libimobiledevice</span>
             </div>
+            <div class="step-item">
+              <span class="step-number">2</span>
+              <span class="step-text">Windows: 下载预编译版本或使用WSL</span>
+            </div>
+            <div class="step-item">
+              <span class="step-number">3</span>
+              <span class="step-text">确保idevice_id命令可用</span>
+            </div>
+          </div>
+
+          <div class="step-item">
+            <span class="step-number">4</span>
+            <span class="step-text">重启应用并验证安装</span>
           </div>
         </div>
       </div>
@@ -308,11 +355,35 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue';
+/*
+ * 探索任务配置页面
+ * 
+ * 设备平台支持：
+ * - Android设备：使用ADB工具进行设备检测、应用安装和管理
+ * - iOS设备：使用libimobiledevice工具进行设备检测（应用安装功能暂不支持）
+ * 
+ * 功能说明：
+ * - 自动检测Android和iOS开发环境
+ * - 支持同时显示多平台设备
+ * - 应用安装功能当前仅支持Android设备
+ */
+
+import { ref, computed, watch, onMounted, type Ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, Loading, SuccessFilled, CloseBold, Refresh, Tools, Warning, Setting } from '@element-plus/icons-vue';
 import { useRouter } from 'vue-router';
 const router = useRouter();
+
+// ===== 类型定义 =====
+type EnvironmentStatus = 'success' | 'error' | 'checking' | 'unknown';
+type LogStatus = 'running' | 'success' | 'error';
+
+interface LogEntry {
+  message: string;
+  status: LogStatus;
+  output?: string;
+  error?: string;
+}
 
 interface AppInfo {
   id: string;
@@ -332,10 +403,11 @@ interface DeviceInfo {
   model: string;
   apiLevel: string;
   cpu: string;
+  platform: 'android' | 'ios'; // 新增：设备平台标识
   status?: 'device' | 'offline' | 'unauthorized';
 }
 
-// 应用安装默认值配置
+// ===== 常量配置 =====
 const APP_INSTALL_DEFAULTS = {
   version: '1.0.0',
   apiLevel: '30',
@@ -348,9 +420,45 @@ const APP_INSTALL_DEFAULTS = {
   fallbackPackage: 'com.unknown.app'
 } as const;
 
-// 环境相关状态
+const ENVIRONMENT_CONFIG = {
+  android: {
+    checkCommand: 'adb version',
+    versionRegex: /Android Debug Bridge version (\d+\.\d+\.\d+)/,
+    name: 'Android ADB'
+  },
+  ios: {
+    checkCommand: 'idevice_id --version',
+    versionRegex: /idevice_id (\d+\.\d+\.\d+)/,
+    name: 'iOS libimobiledevice'
+  }
+} as const;
+
+const DEVICE_COMMANDS = {
+  android: {
+    listDevices: 'adb devices -l',
+    checkConnection: 'adb devices',
+    getApiLevel: (deviceId: string) => `adb -s ${deviceId} shell getprop ro.build.version.sdk`,
+    getCpu: (deviceId: string) => `adb -s ${deviceId} shell getprop ro.product.cpu.abi`,
+    getModel: (deviceId: string) => `adb -s ${deviceId} shell getprop ro.product.model`,
+    getName: undefined
+  },
+  ios: {
+    listDevices: 'idevice_id -l',
+    checkConnection: 'idevice_id -l',
+    getApiLevel: (deviceId: string) => `ideviceinfo -u ${deviceId} -k ProductVersion`,
+    getCpu: (deviceId: string) => `ideviceinfo -u ${deviceId} -k CPUArchitecture`,
+    getModel: (deviceId: string) => `ideviceinfo -u ${deviceId} -k ProductType`,
+    getName: (deviceId: string) => `ideviceinfo -u ${deviceId} -k DeviceName`
+  }
+} as const;
+
+// ===== 环境检测相关状态 =====
+// Android ADB环境状态
 const adbStatus = ref<'success' | 'error' | 'checking' | 'unknown'>('unknown');
 const adbVersion = ref<string>('');
+// iOS libimobiledevice环境状态  
+const iosStatus = ref<'success' | 'error' | 'checking' | 'unknown'>('unknown');
+const iosVersion = ref<string>('');
 const showEnvDialog = ref(false);
 
 // 设备相关状态
@@ -426,19 +534,51 @@ const installDialog = ref({
   }>
 });
 
-// 计算属性
-const adbStatusText = computed(() => {
-  switch (adbStatus.value) {
-    case 'success':
-      return '已安装';
-    case 'error':
-      return '未安装';
-    case 'checking':
-      return '检测中...';
-    default:
-      return '未知';
+// ===== 通用工具函数 =====
+// 执行命令的通用函数
+async function executeCommand(command: string, errorPrefix: string = '命令执行失败'): Promise<{ success: boolean; stdout?: string; stderr?: string; error?: string }> {
+  if (!window.cmdAPI) {
+    return { success: false, error: 'CMD API 不可用' };
   }
-});
+
+  try {
+    const result = await window.cmdAPI.exec(command);
+    return result;
+  } catch (error) {
+    console.error(`${errorPrefix}:`, error);
+    return { success: false, error: String(error) };
+  }
+}
+
+// 提取版本信息的通用函数
+function extractVersion(output: string, regex: RegExp, fallback: string = '已安装'): string {
+  const match = output.match(regex);
+  return match ? match[1] : fallback;
+}
+
+// 添加日志条目
+function addLog(message: string, status: LogStatus, output?: string, error?: string): void {
+  installDialog.value.logs.push({ message, status, output, error });
+}
+
+// 获取平台标签配置
+function getPlatformTagConfig(platform: 'android' | 'ios') {
+  return {
+    type: platform === 'android' ? 'success' as const : 'primary' as const,
+    text: platform === 'android' ? 'Android' : 'iOS'
+  };
+}
+
+// ===== 计算属性 =====
+const environmentStatusMap = {
+  success: '已安装',
+  error: '未安装',
+  checking: '检测中...',
+  unknown: '未知'
+};
+
+const adbStatusText = computed(() => environmentStatusMap[adbStatus.value]);
+const iosStatusText = computed(() => environmentStatusMap[iosStatus.value]);
 
 // 任务名称
 function generateTaskName() {
@@ -468,38 +608,37 @@ watch(
 const selectedApp = computed(() => appList.value.find(a => a.id === form.value.app));
 const selectedDevice = computed(() => deviceList.value.find(d => d.id === form.value.device));
 
-// 检查ADB环境
-async function checkAdbEnvironment(): Promise<boolean> {
-  if (!window.cmdAPI) {
-    adbStatus.value = 'error';
-    return false;
-  }
-
-  adbStatus.value = 'checking';
-
-  try {
-    const result = await window.cmdAPI.exec('adb version');
-
-    if (result.success && result.stdout) {
-      adbStatus.value = 'success';
-      // 提取版本信息
-      const versionMatch = result.stdout.match(/Android Debug Bridge version (\d+\.\d+\.\d+)/);
-      if (versionMatch) {
-        adbVersion.value = versionMatch[1];
-      }
-      return true;
-    } else {
-      adbStatus.value = 'error';
-      adbVersion.value = '';
-      return false;
-    }
-  } catch (error) {
-    console.error('ADB环境检测失败:', error);
-    adbStatus.value = 'error';
-    adbVersion.value = '';
+// ===== 环境检测函数 =====
+// 通用环境检测函数
+async function checkEnvironment(
+  platform: 'android' | 'ios', 
+  statusRef: Ref<EnvironmentStatus>, 
+  versionRef: Ref<string>
+): Promise<boolean> {
+  const config = ENVIRONMENT_CONFIG[platform];
+  
+  statusRef.value = 'checking';
+  
+  const result = await executeCommand(config.checkCommand, `${config.name}环境检测失败`);
+  
+  if (result.success && result.stdout) {
+    statusRef.value = 'success';
+    versionRef.value = extractVersion(result.stdout, config.versionRegex);
+    return true;
+  } else {
+    statusRef.value = 'error';
+    versionRef.value = '';
     return false;
   }
 }
+
+// 检查Android ADB环境
+const checkAdbEnvironment = (): Promise<boolean> => 
+  checkEnvironment('android', adbStatus, adbVersion);
+
+// 检查iOS libimobiledevice环境
+const checkIosEnvironment = (): Promise<boolean> => 
+  checkEnvironment('ios', iosStatus, iosVersion);
 
 // 显示环境配置引导
 function showEnvironmentGuide() {
@@ -512,7 +651,8 @@ function goToEnvironmentSetup() {
   router.push('/environment-setup/index');
 }
 
-// 解析ADB设备信息
+// ===== 设备信息解析函数 =====
+// 解析Android ADB设备信息
 function parseDeviceInfo(deviceLine: string): DeviceInfo | null {
   try {
     // 解析 "adb devices -l" 的输出行
@@ -524,15 +664,16 @@ function parseDeviceInfo(deviceLine: string): DeviceInfo | null {
     const status = parts[1] as 'device' | 'offline' | 'unauthorized';
 
     if (status !== 'device') {
-      // 设备未就绪，但仍然显示
-      return {
-        id: deviceId,
-        name: `${deviceId} (${status})`,
-        model: 'Unknown',
-        apiLevel: 'Unknown',
-        cpu: 'Unknown',
-        status
-      };
+          // 设备未就绪，但仍然显示
+    return {
+      id: deviceId,
+      name: `${deviceId} (${status})`,
+      model: 'Unknown',
+      apiLevel: 'Unknown',
+      cpu: 'Unknown',
+      platform: 'android' as const, // Android设备
+      status
+    };
     }
 
     // 解析详细信息
@@ -549,101 +690,178 @@ function parseDeviceInfo(deviceLine: string): DeviceInfo | null {
       model: model,
       apiLevel: 'Unknown', // 需要额外查询
       cpu: 'Unknown', // 需要额外查询
+      platform: 'android' as const, // Android设备
       status: 'device'
     };
   } catch (error) {
-    console.error('解析设备信息失败:', error);
+    console.error('解析Android设备信息失败:', error);
     return null;
   }
 }
 
-// 获取设备详细信息
-async function getDeviceDetails(deviceId: string): Promise<Partial<DeviceInfo>> {
-  const details: Partial<DeviceInfo> = {};
-
+// 解析iOS设备信息
+function parseIosDeviceInfo(deviceId: string, deviceName?: string): DeviceInfo | null {
   try {
-    // 获取API级别
-    const apiResult = await window.cmdAPI.exec(`adb -s ${deviceId} shell getprop ro.build.version.sdk`);
+    if (!deviceId || deviceId.trim() === '') {
+      return null;
+    }
+
+    return {
+      id: deviceId,
+      name: deviceName || `iOS设备(${deviceId})`,
+      model: 'Unknown', // 需要额外查询
+      apiLevel: 'Unknown', // 需要额外查询
+      cpu: 'Unknown', // 需要额外查询
+      platform: 'ios' as const, // iOS设备
+      status: 'device'
+    };
+  } catch (error) {
+    console.error('解析iOS设备信息失败:', error);
+    return null;
+  }
+}
+
+// ===== 设备详细信息获取函数 =====
+// 获取设备详细信息的通用函数
+async function getDeviceDetails(deviceId: string, platform: 'android' | 'ios'): Promise<Partial<DeviceInfo>> {
+  const details: Partial<DeviceInfo> = {};
+  const commands = DEVICE_COMMANDS[platform];
+  
+  try {
+    // 获取API级别/版本
+    const apiResult = await executeCommand(commands.getApiLevel(deviceId));
     if (apiResult.success && apiResult.stdout) {
       details.apiLevel = apiResult.stdout.trim();
     }
 
     // 获取CPU架构
-    const cpuResult = await window.cmdAPI.exec(`adb -s ${deviceId} shell getprop ro.product.cpu.abi`);
+    const cpuResult = await executeCommand(commands.getCpu(deviceId));
     if (cpuResult.success && cpuResult.stdout) {
       details.cpu = cpuResult.stdout.trim();
     }
 
-    // 获取更详细的型号信息
-    const modelResult = await window.cmdAPI.exec(`adb -s ${deviceId} shell getprop ro.product.model`);
+    // 获取设备型号
+    const modelResult = await executeCommand(commands.getModel(deviceId));
     if (modelResult.success && modelResult.stdout) {
-      const fullModel = modelResult.stdout.trim();
-      if (fullModel && fullModel !== 'Unknown') {
-        details.model = fullModel;
-        details.name = `${deviceId}(${fullModel})`;
+      const model = modelResult.stdout.trim();
+      if (model && model !== 'Unknown') {
+        details.model = model;
+        
+        // iOS设备还需要获取设备名称
+        if (platform === 'ios' && commands.getName) {
+          const nameResult = await executeCommand(commands.getName(deviceId));
+          if (nameResult.success && nameResult.stdout) {
+            const deviceName = nameResult.stdout.trim();
+            details.name = `${deviceName}(${deviceId})`;
+          }
+        } else {
+          details.name = `${deviceId}(${model})`;
+        }
       }
     }
   } catch (error) {
-    console.error(`获取设备 ${deviceId} 详细信息失败:`, error);
+    console.error(`获取${platform === 'android' ? 'Android' : 'iOS'}设备 ${deviceId} 详细信息失败:`, error);
   }
 
   return details;
 }
 
-// 刷新设备列表
-async function refreshDevices() {
-  // 先检查ADB环境
-  if (adbStatus.value !== 'success') {
-    const isAdbAvailable = await checkAdbEnvironment();
-    if (!isAdbAvailable) {
-      ElMessage.error('ADB环境不可用，请先配置ADB环境');
-      showEnvironmentGuide();
-      return;
-    }
-  }
-
-  deviceLoading.value = true;
-
+// ===== 设备刷新函数 =====
+// 刷新指定平台的设备列表
+async function refreshPlatformDevices(platform: 'android' | 'ios'): Promise<DeviceInfo[]> {
+  const devices: DeviceInfo[] = [];
+  const commands = DEVICE_COMMANDS[platform];
+  
   try {
-    // 执行 adb devices -l 获取设备列表
-    const result = await window.cmdAPI.exec('adb devices -l');
-
-    if (!result.success) {
-      throw new Error(result.error || 'ADB命令执行失败');
+    const result = await executeCommand(commands.listDevices, `${platform}设备检测失败`);
+    
+    if (!result.success || !result.stdout) {
+      console.warn(`${platform}设备检测失败:`, result.error);
+      return devices;
     }
 
-    const output = result.stdout || '';
-    const lines = output.split('\n').filter((line: string) => line.trim() && !line.includes('List of devices'));
-
-    if (lines.length === 0) {
-      deviceList.value = [];
-      ElMessage.warning('未检测到连接的设备，请确保设备已连接并启用USB调试');
-      return;
-    }
-
-    // 解析设备列表
-    const devices: DeviceInfo[] = [];
-
-    for (const line of lines) {
-      const deviceInfo = parseDeviceInfo(line);
-      if (deviceInfo) {
-        // 如果设备状态正常，获取详细信息
-        if (deviceInfo.status === 'device') {
-          const details = await getDeviceDetails(deviceInfo.id);
-          Object.assign(deviceInfo, details);
+    const output = result.stdout;
+    
+    if (platform === 'android') {
+      const lines = output.split('\n').filter((line: string) => 
+        line.trim() && !line.includes('List of devices'));
+      
+      for (const line of lines) {
+        const deviceInfo = parseDeviceInfo(line);
+        if (deviceInfo) {
+          if (deviceInfo.status === 'device') {
+            const details = await getDeviceDetails(deviceInfo.id, platform);
+            Object.assign(deviceInfo, details);
+          }
+          devices.push(deviceInfo);
         }
-        devices.push(deviceInfo);
+      }
+    } else {
+      const deviceIds = output.split('\n').filter((id: string) => id.trim());
+      
+      for (const deviceId of deviceIds) {
+        const deviceInfo = parseIosDeviceInfo(deviceId.trim());
+        if (deviceInfo) {
+          const details = await getDeviceDetails(deviceInfo.id, platform);
+          Object.assign(deviceInfo, details);
+          devices.push(deviceInfo);
+        }
       }
     }
 
-    deviceList.value = devices;
+    console.log(`检测到 ${devices.length} 个${platform === 'android' ? 'Android' : 'iOS'}设备`);
+  } catch (error) {
+    console.error(`刷新${platform}设备列表失败:`, error);
+  }
 
-    // 如果当前选择的设备不在新列表中，清空选择
-    if (form.value.device && !devices.find(d => d.id === form.value.device)) {
+  return devices;
+}
+
+// 刷新所有设备列表
+async function refreshDevices(): Promise<void> {
+  deviceLoading.value = true;
+  
+  try {
+    const [isAdbAvailable, isIosAvailable] = await Promise.all([
+      checkAdbEnvironment(),
+      checkIosEnvironment()
+    ]);
+
+    const allDevices: DeviceInfo[] = [];
+    let androidDeviceCount = 0;
+    let iosDeviceCount = 0;
+
+    // 并行获取设备列表
+    const devicePromises: Promise<DeviceInfo[]>[] = [];
+    
+    if (isAdbAvailable) {
+      devicePromises.push(refreshPlatformDevices('android'));
+    }
+    
+    if (isIosAvailable) {
+      devicePromises.push(refreshPlatformDevices('ios'));
+    }
+
+    const deviceResults = await Promise.all(devicePromises);
+    
+    deviceResults.forEach((devices, index) => {
+      allDevices.push(...devices);
+      if (isAdbAvailable && (!isIosAvailable || index === 0)) {
+        androidDeviceCount = devices.length;
+      } else if (isIosAvailable) {
+        iosDeviceCount = devices.length;
+      }
+    });
+
+    deviceList.value = allDevices;
+
+    // 清空无效的设备选择
+    if (form.value.device && !allDevices.find(d => d.id === form.value.device)) {
       form.value.device = '';
     }
 
-    ElMessage.success(`检测到 ${devices.length} 个设备`);
+    // 显示检测结果
+    showDeviceDetectionResult(allDevices.length, androidDeviceCount, iosDeviceCount, isAdbAvailable, isIosAvailable);
   } catch (error) {
     console.error('刷新设备列表失败:', error);
     ElMessage.error(`设备检测失败: ${error}`);
@@ -653,18 +871,34 @@ async function refreshDevices() {
   }
 }
 
-// 添加日志条目
-function addLog(message: string, status: 'running' | 'success' | 'error', output?: string, error?: string) {
-  installDialog.value.logs.push({
-    message,
-    status,
-    output,
-    error
-  });
+// 显示设备检测结果
+function showDeviceDetectionResult(
+  totalCount: number, 
+  androidCount: number, 
+  iosCount: number, 
+  isAdbAvailable: boolean, 
+  isIosAvailable: boolean
+): void {
+  if (totalCount === 0) {
+    if (!isAdbAvailable && !isIosAvailable) {
+      ElMessage.warning('未检测到ADB和iOS开发环境，请先配置相关工具');
+      showEnvironmentGuide();
+    } else {
+      ElMessage.warning('未检测到连接的设备，请确保设备已连接并启用调试模式');
+    }
+  } else {
+    const messages = [];
+    if (androidCount > 0) messages.push(`${androidCount}个Android设备`);
+    if (iosCount > 0) messages.push(`${iosCount}个iOS设备`);
+    ElMessage.success(`检测到 ${messages.join('、')}`);
+  }
 }
 
-// 检查设备连接状态
-async function checkDeviceConnection(deviceId: string): Promise<boolean> {
+// 已移至通用工具函数部分
+
+// ===== 设备连接检查函数 =====
+// 检查Android设备连接状态
+async function checkAndroidDeviceConnection(deviceId: string): Promise<boolean> {
   try {
     const result = await window.cmdAPI.exec('adb devices');
     if (result.success && result.stdout) {
@@ -676,8 +910,33 @@ async function checkDeviceConnection(deviceId: string): Promise<boolean> {
     }
     return false;
   } catch (error) {
-    console.error('检查设备连接失败:', error);
+    console.error('检查Android设备连接失败:', error);
     return false;
+  }
+}
+
+// 检查iOS设备连接状态
+async function checkIosDeviceConnection(deviceId: string): Promise<boolean> {
+  try {
+    const result = await window.cmdAPI.exec('idevice_id -l');
+    if (result.success && result.stdout) {
+      // 检查设备是否在连接的设备列表中
+      const devices = result.stdout.split('\n').filter((id: string) => id.trim());
+      return devices.includes(deviceId);
+    }
+    return false;
+  } catch (error) {
+    console.error('检查iOS设备连接失败:', error);
+    return false;
+  }
+}
+
+// 检查设备连接状态（统一接口）
+async function checkDeviceConnection(deviceId: string, platform: 'android' | 'ios'): Promise<boolean> {
+  if (platform === 'android') {
+    return await checkAndroidDeviceConnection(deviceId);
+  } else {
+    return await checkIosDeviceConnection(deviceId);
   }
 }
 
@@ -778,10 +1037,25 @@ async function installApp() {
     installDialog.value.currentCommand = '检查设备连接状态...';
     addLog('检查设备连接状态', 'running');
 
-    const isConnected = await checkDeviceConnection(form.value.device);
+    // 获取选中设备的平台信息
+    const selectedDevice = deviceList.value.find(d => d.id === form.value.device);
+    if (!selectedDevice) {
+      addLog('设备信息获取失败', 'error', '', '未找到选中的设备信息');
+      ElMessage.error('设备信息不完整');
+      return;
+    }
+
+    // 注意：当前应用安装功能仅支持Android设备
+    if (selectedDevice.platform !== 'android') {
+      addLog('设备平台不支持', 'error', '', '当前版本仅支持Android设备的应用安装');
+      ElMessage.error('iOS设备暂不支持应用安装功能');
+      return;
+    }
+
+    const isConnected = await checkDeviceConnection(form.value.device, selectedDevice.platform);
     if (!isConnected) {
-      addLog('设备连接检查失败', 'error', '', '请确保设备已连接并启用USB调试');
-      ElMessage.error('设备未连接或ADB不可用');
+      addLog('设备连接检查失败', 'error', '', `请确保${selectedDevice.platform === 'android' ? 'Android' : 'iOS'}设备已连接并启用调试模式`);
+      ElMessage.error('设备未连接或相关工具不可用');
       return;
     }
     addLog('设备连接正常', 'success');
@@ -891,11 +1165,14 @@ function submitForm() {
 
 // 页面加载时检查环境和设备
 onMounted(async () => {
-  // 先检查ADB环境
-  const isAdbAvailable = await checkAdbEnvironment();
+  // 同时检查Android和iOS环境
+  const [isAdbAvailable, isIosAvailable] = await Promise.all([
+    checkAdbEnvironment(),
+    checkIosEnvironment()
+  ]);
 
-  // 如果ADB可用，则尝试获取设备列表
-  if (isAdbAvailable) {
+  // 如果任一环境可用，则尝试获取设备列表
+  if (isAdbAvailable || isIosAvailable) {
     refreshDevices();
   }
 });
@@ -1109,6 +1386,16 @@ onMounted(async () => {
   .device-name {
     font-weight: 500;
     color: #303133;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .platform-tag {
+      font-size: 10px;
+      height: 16px;
+      padding: 0 6px;
+      line-height: 16px;
+    }
   }
 
   .device-details {

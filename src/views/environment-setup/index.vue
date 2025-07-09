@@ -15,7 +15,7 @@
                 </el-tag>
               </div>
             </div>
-            <p>引导您安装和配置Python、Appium等自动化测试必需的环境</p>
+            <p>引导您安装和配置Python、Appium、Android ADB、iOS libimobiledevice等自动化测试必需的环境</p>
           </div>
           <div class="header-actions">
             <el-button type="warning" @click="checkAllEnvironments">
@@ -61,6 +61,9 @@
               <el-icon v-else-if="item.status === 'error'" class="error-icon">
                 <CloseBold />
               </el-icon>
+              <el-icon v-else-if="item.status === 'unsupported'" class="unsupported-icon">
+                <CircleCloseFilled />
+              </el-icon>
               <el-icon v-else class="warning-icon">
                 <QuestionFilled />
               </el-icon>
@@ -75,10 +78,10 @@
             <div class="status-actions">
               <el-button
                 size="small"
-                :type="item.status === 'success' ? 'success' : 'primary'"
+                :type="item.status === 'success' ? 'success' : item.status === 'unsupported' ? 'info' : 'primary'"
                 @click="handleActionButtonClick(item)"
                 :loading="item.checking"
-                :disabled="item.checking"
+                :disabled="item.checking || item.status === 'unsupported'"
               >
                 {{ getActionButtonText(item) }}
               </el-button>
@@ -86,7 +89,7 @@
                 size="small"
                 @click="checkEnvironment(item)"
                 :loading="item.checking"
-                :disabled="item.installing"
+                :disabled="item.installing || item.status === 'unsupported'"
               >
                 重新检测
               </el-button>
@@ -247,7 +250,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, nextTick } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Refresh, Monitor, Loading, SuccessFilled, CloseBold, QuestionFilled } from '@element-plus/icons-vue';
+import { Refresh, Monitor, Loading, SuccessFilled, CloseBold, QuestionFilled, CircleCloseFilled } from '@element-plus/icons-vue';
 
 // 使用类型断言避免与现有类型冲突
 
@@ -259,7 +262,7 @@ interface EnvironmentItem {
   installCommands: string[];
   installSteps: string[];
   notes?: string[];
-  status: 'success' | 'error' | 'unknown';
+  status: 'success' | 'error' | 'unknown' | 'unsupported';
   version?: string;
   checking: boolean;
   installing: boolean;
@@ -291,7 +294,7 @@ function generateEnvironmentItems(platform: string): EnvironmentItem[] {
   const isWindows = platform === 'win32';
   const isMac = platform === 'darwin';
 
-  return [
+  const allItems = [
     {
       key: 'python',
       name: 'Python',
@@ -318,14 +321,10 @@ function generateEnvironmentItems(platform: string): EnvironmentItem[] {
             ]
           : ['更新系统包管理器', '安装Python3和pip', '验证安装：python3 --version', '更新pip到最新版本'],
       notes: isWindows
-        ? [
-            '推荐安装Python 3.11或更高版本',
-            '安装时必须勾选"Add Python to PATH"选项',
-            '如果已安装但检测失败，请检查环境变量配置'
-          ]
+        ? ['推荐安装Python 3.11+', '安装时必须勾选"Add Python to PATH"']
         : isMac
-          ? ['推荐使用Homebrew安装Python', '确保PATH环境变量包含Python路径', 'macOS自带Python2，建议安装Python3']
-          : ['推荐安装Python 3.11或更高版本', '确保python3和pip3命令可用', '可能需要配置别名或符号链接'],
+          ? ['推荐使用Homebrew安装', '确保PATH包含Python路径']
+          : ['推荐安装Python 3.11+', '确保python3命令可用'],
       status: 'unknown',
       checking: false,
       installing: false
@@ -338,7 +337,7 @@ function generateEnvironmentItems(platform: string): EnvironmentItem[] {
       installCommands: isWindows
         ? ['python -m ensurepip --upgrade', 'python -m pip install --upgrade pip']
         : ['python3 -m ensurepip --upgrade', 'python3 -m pip install --upgrade pip'],
-      installSteps: ['Pip通常随Python一起安装', '如果没有pip，可以使用 python -m ensurepip 安装', '更新到最新版本'],
+      installSteps: ['Pip通常随Python一起安装', '如果没有可使用 python -m ensurepip 安装'],
       status: 'unknown',
       checking: false,
       installing: false
@@ -358,7 +357,7 @@ function generateEnvironmentItems(platform: string): EnvironmentItem[] {
         : isMac
           ? ['使用Homebrew安装：brew install node', '验证安装：node --version 和 npm --version']
           : ['添加NodeSource存储库', '安装Node.js LTS版本', '验证安装：node --version 和 npm --version'],
-      notes: ['推荐安装LTS长期支持版本', 'npm会随Node.js一起安装'],
+      notes: ['推荐安装LTS版本', 'npm会一起安装'],
       status: 'unknown',
       checking: false,
       installing: false
@@ -375,7 +374,7 @@ function generateEnvironmentItems(platform: string): EnvironmentItem[] {
         '安装UiAutomator2驱动',
         '验证安装：appium --version'
       ],
-      notes: ['需要先安装Node.js', '建议安装UiAutomator2驱动用于Android测试'],
+      notes: ['需要先安装Node.js', '建议安装UiAutomator2驱动'],
       status: 'unknown',
       checking: false,
       installing: false
@@ -385,12 +384,13 @@ function generateEnvironmentItems(platform: string): EnvironmentItem[] {
       name: 'Appium Python Client',
       description: 'Appium的Python客户端库',
       checkCommand: isMac
-        ? 'python3 -c "import appium; print(appium.__version__)"'
-        : 'python -c "import appium; print(appium.__version__)"',
+        ? 'python3 -c "import appium; print(f\'appium {appium.__version__}\')" 2>/dev/null || echo "模块未安装"'
+        : 'python -c "import appium; print(f\'appium {appium.__version__}\')" 2>nul || echo "模块未安装"',
       installCommands: isMac
         ? ['pip3 install Appium-Python-Client', 'pip3 install selenium']
         : ['pip install Appium-Python-Client', 'pip install selenium'],
-      installSteps: ['确保已安装Python和pip', '安装Appium Python客户端', '安装Selenium库', '验证安装'],
+      installSteps: ['确保已安装Python和pip', '安装Appium Python客户端', '安装Selenium库'],
+      notes: ['需要先安装Python和pip', 'Selenium库提供额外功能支持'],
       status: 'unknown',
       checking: false,
       installing: false
@@ -418,8 +418,8 @@ function generateEnvironmentItems(platform: string): EnvironmentItem[] {
           ? ['使用Homebrew安装：brew install android-platform-tools', '验证安装：adb version']
           : ['更新包管理器', '安装android-tools-adb包', '验证安装：adb version'],
       notes: isWindows
-        ? ['配置环境变量后可在任何目录使用adb命令，如果不配置环境变量，需要在platform-tools目录下使用adb命令']
-        : ['推荐使用包管理器安装ADB', '确保命令行可以直接使用adb命令'],
+        ? ['配置环境变量后可在任何目录使用adb命令', '如果检测失败，建议重启电脑']
+        : ['推荐使用包管理器安装', '确保命令行可以直接使用adb命令'],
       status: 'unknown',
       checking: false,
       installing: false
@@ -444,26 +444,134 @@ function generateEnvironmentItems(platform: string): EnvironmentItem[] {
         : isMac
           ? ['使用Homebrew安装：brew install openjdk@17', '配置JAVA_HOME环境变量', '验证安装：java -version']
           : ['更新包管理器', '安装OpenJDK 17', '配置JAVA_HOME环境变量', '验证安装：java -version'],
-      notes: ['推荐安装JDK 11或17 LTS版本', '正确配置JAVA_HOME环境变量很重要'],
+      notes: ['推荐安装JDK 11或17 LTS版本', '需要正确配置JAVA_HOME环境变量'],
       status: 'unknown',
       checking: false,
       installing: false
-    }
-  ];
-}
+    },
+    {
+      key: 'libimobiledevice',
+      name: 'libimobiledevice',
+      description: 'iOS设备通信库 (iOS设备检测必需)',
+      checkCommand: 'idevice_id --version 2>/dev/null || echo "未安装"',
+      installCommands: isMac
+        ? ['brew install libimobiledevice', 'brew install ideviceinstaller']
+        : ['sudo apt update', 'sudo apt install libimobiledevice6 libimobiledevice-utils'],
+      installSteps: isMac
+        ? [
+            '安装libimobiledevice：brew install libimobiledevice',
+            '安装iOS应用安装工具：brew install ideviceinstaller',
+            '验证安装：idevice_id --version'
+          ]
+        : [
+            '安装libimobiledevice：sudo apt install libimobiledevice6 libimobiledevice-utils',
+            '验证安装：idevice_id --version'
+          ],
+      notes: isMac
+        ? ['确保iOS设备已启用"信任此电脑"', '首次连接设备时需要在设备上确认信任']
+        : ['可能需要额外的权限配置', '建议将用户添加到plugdev组：sudo usermod -a -G plugdev $USER'],
+      status: 'unknown',
+      checking: false,
+      installing: false
+    },
+    {
+      key: 'ios-deploy',
+      name: 'ios-deploy',
+      description: 'iOS应用部署工具 (可选)',
+      checkCommand: 'ios-deploy --version 2>/dev/null || echo "未安装"',
+      installCommands: ['npm install -g ios-deploy'],
+      installSteps: [
+        '确保已安装Node.js和npm',
+        '全局安装：npm install -g ios-deploy',
+        '验证安装：ios-deploy --version'
+      ],
+      notes: isMac
+        ? ['需要Xcode命令行工具支持', '用于直接部署iOS应用到设备']
+        : ['Linux上功能受限，可能需要额外依赖'],
+      status: 'unknown',
+      checking: false,
+      installing: false
+    },
+        {
+      key: 'xcrun',
+      name: 'Xcode Command Line Tools',
+      description: 'iOS开发命令行工具',
+      checkCommand: 'xcrun --version 2>/dev/null || echo "未安装"',
+      installCommands: ['xcode-select --install'],
+      installSteps: [
+        '运行命令：xcode-select --install',
+        '在弹出的对话框中点击"安装"',
+        '等待下载和安装完成',
+        '验证安装：xcrun --version'
+      ],
+      notes: [
+        '包含iOS开发必需的编译工具和SDK',
+        '安装包较大，需要稳定的网络连接'
+      ],
+      status: 'unknown',
+      checking: false,
+      installing: false
+    },
+     {
+       key: 'ios-device-connection',
+       name: 'iOS设备连接测试',
+       description: '测试是否能够检测到连接的iOS设备',
+       checkCommand: 'idevice_id -l 2>/dev/null || echo "无设备连接"',
+       installCommands: [],
+       installSteps: [
+         '此项用于测试iOS设备连接状态',
+         '确保已安装libimobiledevice工具',
+         '使用USB连接iOS设备',
+         '在iOS设备上信任此电脑',
+         '点击"重新检测"查看连接状态'
+       ],
+       notes: [
+         '需要先安装libimobiledevice工具',
+         '首次连接需要在设备上确认信任',
+         '显示设备ID表示连接成功'
+       ],
+       status: 'unknown',
+       checking: false,
+       installing: false
+     }
+   ];
+
+   // 根据平台过滤不支持的环境项
+   return allItems.filter(item => {
+     // iOS 相关工具在 Windows 上不支持
+     if (isWindows && (
+       item.key === 'ios-deploy' || 
+       item.key === 'libimobiledevice' || 
+       item.key === 'ios-device-connection'
+     )) {
+       return false;
+     }
+     
+     // Xcode Command Line Tools 仅支持 macOS
+     if (item.key === 'xcrun' && !isMac) {
+       return false;
+     }
+     
+     return true;
+   }) as EnvironmentItem[];
+ }
 
 const environmentItems = reactive<EnvironmentItem[]>([]);
 
 const overallStatus = computed(() => {
   const successCount = environmentItems.filter(item => item.status === 'success').length;
+  const unsupportedCount = environmentItems.filter(item => item.status === 'unsupported').length;
+  const availableCount = environmentItems.length - unsupportedCount; // 可用的环境项数量
   const totalCount = environmentItems.length;
 
-  if (successCount === totalCount) {
+  if (successCount === availableCount) {
     return { type: 'success', text: '环境完整' };
   } else if (successCount > 0) {
-    return { type: 'warning', text: `部分完成 (${successCount}/${totalCount})` };
+    return { type: 'warning', text: `部分完成 (${successCount}/${availableCount}可用, ${unsupportedCount}不支持)` };
+  } else if (unsupportedCount === totalCount) {
+    return { type: 'info', text: '当前平台不支持所有环境' };
   } else {
-    return { type: 'danger', text: '未配置' };
+    return { type: 'danger', text: `未配置 (${unsupportedCount}个不支持)` };
   }
 });
 
@@ -472,6 +580,7 @@ function getActionButtonText(item: EnvironmentItem): string {
   if (item.installing) return '查看进度';
   if (item.checking) return '检测中...';
   if (item.status === 'success') return '已安装';
+  if (item.status === 'unsupported') return '不支持';
   if (!item.installCommands || item.installCommands.length === 0) return '查看指南';
   return '安装';
 }
@@ -481,6 +590,12 @@ function handleActionButtonClick(item: EnvironmentItem) {
   if (item.status === 'success') {
     // 已安装状态，重新检测
     checkEnvironment(item);
+  } else if (item.status === 'unsupported') {
+    // 不支持状态，展开安装指南显示说明
+    if (!activeGuides.value.includes(item.key)) {
+      activeGuides.value.push(item.key);
+    }
+    ElMessage.info('此环境在当前平台不受支持，请查看详细说明');
   } else if (item.installing) {
     // 正在安装，重新打开进度对话框
     reopenInstallDialog(item);
@@ -566,17 +681,51 @@ async function checkEnvironment(item: EnvironmentItem) {
 
   try {
     const result = await (window as any).cmdAPI.exec(item.checkCommand);
+    console.log('*****', result);
     if (result.success) {
       // 检查stdout或stderr中的版本信息
       const outputText = result.stdout || result.stderr || '';
+      const trimmedOutput = outputText.trim();
 
-      // 如果有输出内容或者命令执行成功，视为安装成功
-      if (outputText.trim()) {
+      // 检查是否为未安装或其他错误情况
+      if (trimmedOutput.includes('未安装') || 
+          trimmedOutput.includes('无设备连接') ||
+          trimmedOutput.includes('command not found') ||
+          trimmedOutput.includes('不是内部或外部命令') ||
+          trimmedOutput.includes('No module named') ||
+          trimmedOutput.includes('模块未安装')) {
+        item.status = 'error';
+        if (trimmedOutput.includes('无设备连接')) {
+          item.version = '无设备连接';
+        } else if (trimmedOutput.includes('No module named') || trimmedOutput.includes('模块未安装')) {
+          item.version = '模块未安装';
+        }
+      } else if (trimmedOutput) {
         item.status = 'success';
-        // 提取版本信息
-        const versionMatch = outputText.match(/\d+\.\d+\.\d+|\d+\.\d+/);
-        if (versionMatch) {
-          item.version = versionMatch[0];
+        
+        // 特殊处理iOS设备连接测试
+        if (item.key === 'ios-device-connection') {
+          // 检查是否包含设备UDID
+          const deviceIds = trimmedOutput.split('\n').filter((line: string) => 
+            line.trim().length > 0 && 
+            !line.includes('无设备连接')
+          );
+          
+          if (deviceIds.length > 0) {
+            item.version = `${deviceIds.length}个设备已连接`;
+          } else {
+            item.status = 'error';
+            item.version = '无设备连接';
+          }
+        } else {
+          // 提取版本信息
+          const versionMatch = trimmedOutput.match(/\d+\.\d+\.\d+|\d+\.\d+/);
+          if (versionMatch) {
+            item.version = versionMatch[0];
+          } else {
+            // 如果没有版本号，但有其他输出，标记为已安装
+            item.version = '已安装';
+          }
         }
       } else {
         item.status = 'error';
@@ -890,6 +1039,10 @@ onMounted(async () => {
       color: #f56c6c;
     }
 
+    .unsupported-icon {
+      color: #909399;
+    }
+
     .warning-icon {
       color: #e6a23c;
     }
@@ -908,6 +1061,7 @@ onMounted(async () => {
       font-size: 12px;
       color: #67c23a;
       margin-left: 8px;
+      min-width: 40px;
     }
 
     .description {
