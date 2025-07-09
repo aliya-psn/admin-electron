@@ -19,7 +19,7 @@
 
           </div>
           <div class="header-actions">
-            <el-button type="primary" @click="checkAllEnvironments">
+            <el-button type="warning" @click="checkAllEnvironments">
               <el-icon class="mr-1">
                 <Refresh />
               </el-icon>
@@ -110,10 +110,10 @@
               <div class="guide-steps">
                 <h4>安装步骤：</h4>
                 <ol>
-                  <li v-for="step in item.installSteps" :key="step">{{ step }}</li>
+                  <li v-for="step in item.installSteps" :key="step" class="install-step" v-html="formatStepWithLinks(step)"></li>
                 </ol>
               </div>
-              <div class="guide-commands" v-if="item.installCommands.length">
+              <div class="guide-commands" v-if="item.installCommands && item.installCommands.length > 0">
                 <h4>安装命令：</h4>
                 <div v-for="cmd in item.installCommands" :key="cmd" class="command-item">
                   <el-input readonly :value="cmd" class="command-input">
@@ -377,22 +377,26 @@ function generateEnvironmentItems(platform: string): EnvironmentItem[] {
       description: 'Android调试桥工具',
       checkCommand: 'adb version',
       installCommands: isWindows
-        ? ['winget install Google.PlatformTools']
+        ? [] // Windows需要手动安装，无自动安装命令
         : isMac
           ? ['brew install android-platform-tools']
           : ['sudo apt update', 'sudo apt install android-tools-adb'],
       installSteps: isWindows
         ? [
-          '下载Android SDK Platform Tools',
-          '解压到合适的目录',
-          '将目录添加到系统PATH环境变量',
-          '验证安装：adb version'
+          '前往Android官方网站下载Platform Tools：https://developer.android.com/studio/releases/platform-tools',
+          '点击"Download SDK Platform-Tools for Windows"下载压缩包',
+          '解压下载的zip文件到合适目录，例如：C:\\platform-tools',
+          '配置环境变量（推荐）：\n• 在Windows搜索框输入"环境变量"\n• 选择"编辑系统环境变量"\n• 点击"环境变量..."\n• 在"系统变量"中找到Path，点击"编辑"\n• 点击"新建"，添加：C:\\platform-tools\n• 确认保存所有设置',
+          '重新打开命令提示符或PowerShell',
+          '验证安装：输入 adb version 命令'
         ]
         : isMac
           ? ['使用Homebrew安装：brew install android-platform-tools', '验证安装：adb version']
           : ['更新包管理器', '安装android-tools-adb包', '验证安装：adb version'],
       notes: isWindows
-        ? ['可以单独安装platform-tools或完整的Android Studio', '确保将ADB路径添加到环境变量中']
+        ? [
+          '配置环境变量后可在任何目录使用adb命令，如果不配置环境变量，需要在platform-tools目录下使用adb命令'
+        ]
         : ['推荐使用包管理器安装ADB', '确保命令行可以直接使用adb命令'],
       status: 'unknown',
       checking: false,
@@ -446,6 +450,7 @@ function getActionButtonText(item: EnvironmentItem): string {
   if (item.installing) return '查看进度';
   if (item.checking) return '检测中...';
   if (item.status === 'success') return '已安装';
+  if (!item.installCommands || item.installCommands.length === 0) return '查看指南';
   return '安装';
 }
 
@@ -457,6 +462,13 @@ function handleActionButtonClick(item: EnvironmentItem) {
   } else if (item.installing) {
     // 正在安装，重新打开进度对话框
     reopenInstallDialog(item);
+  } else if (!item.installCommands || item.installCommands.length === 0) {
+    // 没有安装命令，展开安装指南
+    if (!activeGuides.value.includes(item.key)) {
+      activeGuides.value.push(item.key);
+    }
+    // 显示提示
+    ElMessage.info('请参考下方的详细安装指南进行手动安装');
   } else {
     // 未安装状态，开始安装
     installEnvironment(item);
@@ -532,7 +544,6 @@ async function checkEnvironment(item: EnvironmentItem) {
 
   try {
     const result = await (window as any).cmdAPI.exec(item.checkCommand);
-    
     if (result.success) {
       // 检查stdout或stderr中的版本信息
       const outputText = result.stdout || result.stderr || '';
@@ -723,6 +734,15 @@ async function copyCommand(command: string) {
 // 清空结果
 function clearResult() {
   commandResult.value = null;
+}
+
+// 格式化步骤文本，将URL转换为可点击的链接
+function formatStepWithLinks(step: string): string {
+  // URL正则表达式
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  
+  // 替换URL为可点击的链接
+  return step.replace(urlRegex, '<a href="$1" target="_blank" class="step-link">$1</a>');
 }
 
 // 打开系统终端
@@ -956,6 +976,25 @@ onMounted(async () => {
         margin-bottom: 4px;
         color: #606266;
         line-height: 1.5;
+
+        &.install-step {
+          white-space: pre-line;
+
+          :deep(.step-link) {
+            color: #409eff;
+            text-decoration: none;
+            transition: color 0.3s ease;
+
+            &:hover {
+              color: #66b1ff;
+              text-decoration: underline;
+            }
+
+            &:visited {
+              color: #409eff;
+            }
+          }
+        }
       }
     }
   }
