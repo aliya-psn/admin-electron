@@ -8,10 +8,16 @@
           <el-step title="查看报告" />
         </el-steps>
 
-        <!-- ADB环境状态警告 -->
-        <el-alert v-if="adbStatus === 'error'" type="warning" show-icon :closable="false" class="adb-warning">
+        <!-- 环境状态警告（支持 ADB 和 libimobiledevice） -->
+        <el-alert
+          v-if="adbStatus === 'error' && iosStatus === 'error'"
+          type="warning"
+          show-icon
+          :closable="false"
+          class="adb-warning"
+        >
           <template #default>
-            <div>检测到ADB环境不可用，无法进行设备管理和应用安装。</div>
+            <div>未检测到可用的设备管理环境（Android/iOS），无法进行设备管理和应用安装。</div>
             <div class="alert-actions">
               <el-button type="primary" size="small" @click="showEnvironmentGuide">
                 <el-icon class="mr-1">
@@ -19,7 +25,7 @@
                 </el-icon>
                 配置环境
               </el-button>
-              <el-button type="default" size="small" @click="checkAdbEnvironment">
+              <el-button type="default" size="small" @click="refreshDevices">
                 <el-icon class="mr-1">
                   <Refresh />
                 </el-icon>
@@ -41,9 +47,9 @@
               <el-select
                 v-model="form.device"
                 placeholder="请选择测试设备"
-                style="width: 360px"
+                style="width: 420px"
                 :loading="deviceLoading"
-                :disabled="adbStatus !== 'success'"
+                :disabled="adbStatus !== 'success' && iosStatus !== 'success'"
                 no-data-text="无可用设备，请检查设备连接"
               >
                 <el-option v-for="item in deviceList" :key="item.id" :label="item.name" :value="item.id">
@@ -63,7 +69,7 @@
                 text
                 @click="refreshDevices"
                 :loading="deviceLoading"
-                :disabled="adbStatus !== 'success'"
+                :disabled="adbStatus !== 'success' && iosStatus !== 'success'"
               >
                 <el-icon class="mr-1">
                   <Refresh />
@@ -71,16 +77,16 @@
                 {{ deviceLoading ? '检测中...' : '刷新设备' }}
               </el-button>
             </div>
-            <div v-if="adbStatus !== 'success'" class="form-item-tip">
+            <div v-if="adbStatus !== 'success' && iosStatus !== 'success'" class="form-item-tip">
               <el-icon class="tip-icon ml-1">
                 <Warning />
               </el-icon>
-              需要先配置ADB环境才能检测设备
+              需要先配置可用的设备管理环境（Android/iOS）才能检测设备
             </div>
           </el-form-item>
           <el-form-item label="选择应用" prop="app">
             <div class="config-select-wrapper">
-              <el-select v-model="form.app" placeholder="请选择应用" style="width: 360px">
+              <el-select v-model="form.app" placeholder="请选择应用" style="width: 420px">
                 <el-option v-for="item in appList" :key="item.id" :label="item.name" :value="item.id" />
               </el-select>
               <el-button
@@ -88,7 +94,7 @@
                 text
                 @click="installApp"
                 :loading="installing"
-                :disabled="adbStatus !== 'success'"
+                :disabled="adbStatus !== 'success' && iosStatus !== 'success'"
               >
                 <el-icon class="mr-1" v-if="!installing">
                   <Plus />
@@ -96,11 +102,11 @@
                 {{ installing ? '安装中...' : '安装新的应用' }}
               </el-button>
             </div>
-            <div v-if="adbStatus !== 'success'" class="form-item-tip">
+            <div v-if="adbStatus !== 'success' && iosStatus !== 'success'" class="form-item-tip">
               <el-icon class="tip-icon ml-1">
                 <Warning />
               </el-icon>
-              需要先配置ADB环境才能安装应用
+              需要先配置可用的设备管理环境（Android/iOS）才能安装应用
             </div>
           </el-form-item>
           <el-divider>应用探索测试</el-divider>
@@ -188,16 +194,6 @@
           <div v-if="iosVersion" class="env-version">iOS工具版本：{{ iosVersion }}</div>
         </el-card>
 
-        <el-card class="info-card" v-if="selectedApp">
-          <template #header>应用信息</template>
-          <div>应用包名：{{ selectedApp.package }}</div>
-          <div>应用版本：{{ selectedApp.version }}</div>
-          <div>API版本：{{ selectedApp.apiLevel }}</div>
-          <div>分发类型：{{ selectedApp.channel }}</div>
-          <div>开发厂商：{{ selectedApp.vendor }}</div>
-          <div>虚拟设备号：{{ selectedApp.virtualId }}</div>
-          <div>主Ability：{{ selectedApp.ability }}</div>
-        </el-card>
         <el-card class="info-card" v-if="selectedDevice">
           <template #header>设备信息</template>
           <div>设备标识：{{ selectedDevice.id }}</div>
@@ -212,6 +208,18 @@
           <div>版本：{{ selectedDevice.apiLevel }}</div>
           <div>CPU类型：{{ selectedDevice.cpu }}</div>
         </el-card>
+
+        <el-card class="info-card" v-if="selectedApp">
+          <template #header>应用信息</template>
+          <div>应用包名：{{ selectedApp.package }}</div>
+          <div>应用版本：{{ selectedApp.version }}</div>
+          <div>API版本：{{ selectedApp.apiLevel }}</div>
+          <div>分发类型：{{ selectedApp.channel }}</div>
+          <div>开发厂商：{{ selectedApp.vendor }}</div>
+          <div>虚拟设备号：{{ selectedApp.virtualId }}</div>
+          <div>主Ability：{{ selectedApp.ability }}</div>
+        </el-card>
+
         <el-card class="info-card">
           <template #header>注意事项</template>
           <div>1. 任务执行过程中，请避免PC进入休眠状态。</div>
@@ -413,6 +421,40 @@ const APP_INSTALL_DEFAULTS = {
   fallbackPackage: 'com.unknown.app'
 } as const;
 
+// ===== Shell 指令常量/方法集中管理 =====
+const SHELL_COMMANDS = {
+  // 环境检测
+  adbVersion: 'adb version',
+  iosVersion: 'idevice_id --version',
+  // 设备列表
+  androidListDevices: 'adb devices -l',
+  iosListDevices: 'idevice_id -l',
+  // Android 设备详细
+  androidGetApiLevel: (deviceId: string) => `adb -s ${deviceId} shell getprop ro.build.version.sdk`,
+  androidGetCpu: (deviceId: string) => `adb -s ${deviceId} shell getprop ro.product.cpu.abi`,
+  androidGetModel: (deviceId: string) => `adb -s ${deviceId} shell getprop ro.product.model`,
+  // iOS 设备详细
+  iosGetApiLevel: (deviceId: string) => `ideviceinfo -u ${deviceId} -k ProductVersion`,
+  iosGetCpu: (deviceId: string) => `ideviceinfo -u ${deviceId} -k CPUArchitecture`,
+  iosGetModel: (deviceId: string) => `ideviceinfo -u ${deviceId} -k ProductType`,
+  iosGetName: (deviceId: string) => `ideviceinfo -u ${deviceId} -k DeviceName`,
+  // Android 应用相关
+  androidListPackages: (deviceId: string) => `adb -s ${deviceId} shell pm list packages`,
+  androidPackageVersion: (deviceId: string, pkg: string) =>
+    `adb -s ${deviceId} shell dumpsys package ${pkg} | grep versionName`,
+  // iOS 应用相关
+  iosListApps: (deviceId: string) => `ideviceinstaller -u ${deviceId} -l`,
+  // APK 解析
+  parseApk: (apkPath: string) => `aapt dump badging "${apkPath}"`,
+  // Android 安装 APK
+  androidInstallApk: (deviceId: string, apkPath: string) => `adb -s ${deviceId} install -r "${apkPath}"`,
+  // Android 检查连接
+  androidCheckConnection: 'adb devices',
+  // iOS 检查连接
+  iosCheckConnection: 'idevice_id -l'
+};
+
+// ===== 环境检测相关配置（恢复原始定义） =====
 const ENVIRONMENT_CONFIG = {
   android: {
     checkCommand: 'adb version',
@@ -890,7 +932,7 @@ function showDeviceDetectionResult(
 // 检查Android设备连接状态
 async function checkAndroidDeviceConnection(deviceId: string): Promise<boolean> {
   try {
-    const result = await window.cmdAPI.exec('adb devices');
+    const result = await window.cmdAPI.exec(SHELL_COMMANDS.androidCheckConnection);
     if (result.success && result.stdout) {
       // 检查设备是否在连接的设备列表中
       const devices = result.stdout
@@ -908,7 +950,7 @@ async function checkAndroidDeviceConnection(deviceId: string): Promise<boolean> 
 // 检查iOS设备连接状态
 async function checkIosDeviceConnection(deviceId: string): Promise<boolean> {
   try {
-    const result = await window.cmdAPI.exec('idevice_id -l');
+    const result = await window.cmdAPI.exec(SHELL_COMMANDS.iosCheckConnection);
     if (result.success && result.stdout) {
       // 检查设备是否在连接的设备列表中
       const devices = result.stdout.split('\n').filter((id: string) => id.trim());
@@ -934,12 +976,11 @@ async function checkDeviceConnection(deviceId: string, platform: 'android' | 'io
 async function parseApkInfo(apkPath: string): Promise<Partial<AppInfo> | null> {
   try {
     // 使用aapt或者其他工具解析APK信息
-    const result = await window.cmdAPI.exec(`aapt dump badging "${apkPath}"`);
-    if (result.success && result.stdout) {
-      const packageMatch = result.stdout.match(/package: name='([^']+)'/);
-      const versionMatch = result.stdout.match(/versionName='([^']+)'/);
-      const apiLevelMatch = result.stdout.match(/targetSdkVersion:'([^']+)'/);
-
+    const cmdResult = await executeCommand(SHELL_COMMANDS.parseApk(apkPath));
+    if (cmdResult.success && cmdResult.stdout) {
+      const packageMatch = cmdResult.stdout.match(/package: name='([^']+)'/);
+      const versionMatch = cmdResult.stdout.match(/versionName='([^']+)'/);
+      const apiLevelMatch = cmdResult.stdout.match(/targetSdkVersion:'([^']+)'/);
       if (packageMatch) {
         return {
           package: packageMatch[1],
@@ -952,11 +993,9 @@ async function parseApkInfo(apkPath: string): Promise<Partial<AppInfo> | null> {
         };
       }
     }
-
     // 如果aapt不可用，从文件名提取基本信息
     const fileName = apkPath.split(/[/\\]/).pop() || 'unknown.apk';
     const baseName = fileName.replace('.apk', '');
-
     return {
       package: `${APP_INSTALL_DEFAULTS.packagePrefix}${baseName.toLowerCase()}`,
       version: APP_INSTALL_DEFAULTS.version,
@@ -975,7 +1014,26 @@ async function parseApkInfo(apkPath: string): Promise<Partial<AppInfo> | null> {
 // 安装应用主函数
 async function installApp() {
   try {
-    // 0. 检查ADB环境
+    // 1. 检查是否选择了设备
+    if (!form.value.device) {
+      ElMessage.warning('请先选择测试设备');
+      return;
+    }
+
+    // 获取选中设备的平台信息
+    const selectedDevice = deviceList.value.find(d => d.id === form.value.device);
+    if (!selectedDevice) {
+      ElMessage.error('设备信息不完整');
+      return;
+    }
+
+    // 2. 判断设备平台
+    if (selectedDevice.platform === 'ios') {
+      ElMessage.error('暂不支持 iOS 设备的应用安装');
+      return;
+    }
+
+    // 3. 检查 ADB 环境（仅 Android）
     if (adbStatus.value !== 'success') {
       const isAdbAvailable = await checkAdbEnvironment();
       if (!isAdbAvailable) {
@@ -985,13 +1043,7 @@ async function installApp() {
       }
     }
 
-    // 1. 检查是否选择了设备
-    if (!form.value.device) {
-      ElMessage.warning('请先选择测试设备');
-      return;
-    }
-
-    // 2. 打开文件选择对话框
+    // 4. 打开文件选择对话框
     if (!window.dialogAPI) {
       ElMessage.error('当前环境不支持文件选择功能');
       return;
@@ -1009,7 +1061,7 @@ async function installApp() {
 
     const apkPath = fileResult.data[0];
 
-    // 3. 开始安装流程
+    // 5. 开始安装流程
     installing.value = true;
 
     // 初始化安装对话框
@@ -1026,21 +1078,6 @@ async function installApp() {
     installDialog.value.currentStep = 1;
     installDialog.value.currentCommand = '检查设备连接状态...';
     addLog('检查设备连接状态', 'running');
-
-    // 获取选中设备的平台信息
-    const selectedDevice = deviceList.value.find(d => d.id === form.value.device);
-    if (!selectedDevice) {
-      addLog('设备信息获取失败', 'error', '', '未找到选中的设备信息');
-      ElMessage.error('设备信息不完整');
-      return;
-    }
-
-    // 注意：当前应用安装功能仅支持Android设备
-    if (selectedDevice.platform !== 'android') {
-      addLog('设备平台不支持', 'error', '', '当前版本仅支持Android设备的应用安装');
-      ElMessage.error('iOS设备暂不支持应用安装功能');
-      return;
-    }
 
     const isConnected = await checkDeviceConnection(form.value.device, selectedDevice.platform);
     if (!isConnected) {
@@ -1073,7 +1110,7 @@ async function installApp() {
     installDialog.value.currentCommand = `安装APK: ${apkPath}`;
     addLog('开始安装APK到设备', 'running');
 
-    const installCommand = `adb -s ${form.value.device} install -r "${apkPath}"`;
+    const installCommand = SHELL_COMMANDS.androidInstallApk(form.value.device, apkPath);
     const installResult = await window.cmdAPI.exec(installCommand);
 
     if (!installResult.success || (installResult.stderr && installResult.stderr.includes('FAILED'))) {
@@ -1168,6 +1205,75 @@ onMounted(async () => {
     refreshDevices();
   }
 });
+
+// ===== 设备应用获取函数 =====
+async function fetchDeviceApps(deviceId: string, platform: 'android' | 'ios'): Promise<AppInfo[]> {
+  const apps: AppInfo[] = [];
+  try {
+    if (platform === 'android') {
+      // 获取所有包名
+      const listResult = await executeCommand(SHELL_COMMANDS.androidListPackages(deviceId));
+      if (!listResult.success || !listResult.stdout) return apps;
+      const packageNames = listResult.stdout
+        .split('\n')
+        .map(line => line.replace('package:', '').trim())
+        .filter(Boolean);
+      for (const pkg of packageNames) {
+        // 获取版本号等信息
+        const versionResult = await executeCommand(SHELL_COMMANDS.androidPackageVersion(deviceId, pkg));
+        const version =
+          versionResult.success && versionResult.stdout
+            ? versionResult.stdout.match(/versionName=([\S]+)/)?.[1] || '未知'
+            : '未知';
+        // 这里只填充部分字段，如需更多可扩展
+        apps.push({
+          id: pkg,
+          name: pkg,
+          package: pkg,
+          version: version,
+          apiLevel: '未知',
+          channel: '',
+          vendor: '',
+          virtualId: '',
+          ability: ''
+        });
+      }
+    } else if (platform === 'ios') {
+      const listResult = await executeCommand(SHELL_COMMANDS.iosListApps(deviceId));
+      if (!listResult.success || !listResult.stdout) return apps;
+      const lines = listResult.stdout.split('\n').filter(Boolean);
+      for (const line of lines) {
+        const [pkg, name, version] = line.split(' - ');
+        apps.push({
+          id: pkg,
+          name: name || pkg,
+          package: pkg,
+          version: version || '',
+          apiLevel: '',
+          channel: '',
+          vendor: '',
+          virtualId: '',
+          ability: ''
+        });
+      }
+    }
+  } catch (error) {
+    console.error('获取设备应用列表失败:', error);
+  }
+  return apps;
+}
+
+// 监听设备切换，自动刷新 appList
+watch(
+  () => form.value.device,
+  async deviceId => {
+    appList.value = [];
+    if (!deviceId) return;
+    const device = deviceList.value.find(d => d.id === deviceId);
+    if (!device) return;
+    appList.value = await fetchDeviceApps(deviceId, device.platform);
+  }
+);
 </script>
 
 <style scoped lang="scss">
