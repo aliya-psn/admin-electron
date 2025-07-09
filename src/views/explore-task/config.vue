@@ -50,11 +50,7 @@
                   <div class="device-option">
                     <div class="device-name">
                       {{ item.name }}
-                      <el-tag 
-                        :type="getPlatformTagConfig(item.platform).type" 
-                        size="small" 
-                        class="platform-tag"
-                      >
+                      <el-tag :type="getPlatformTagConfig(item.platform).type" size="small" class="platform-tag">
                         {{ getPlatformTagConfig(item.platform).text }}
                       </el-tag>
                     </div>
@@ -178,7 +174,7 @@
             </el-tag>
           </div>
           <div v-if="adbVersion" class="env-version">ADB版本：{{ adbVersion }}</div>
-          
+
           <!-- iOS libimobiledevice环境 -->
           <div class="env-status-item">
             <span>libimobiledevice(iOS)：</span>
@@ -209,10 +205,7 @@
           <div>设备型号：{{ selectedDevice.model }}</div>
           <div>
             设备平台：
-            <el-tag 
-              :type="getPlatformTagConfig(selectedDevice.platform).type" 
-              size="small"
-            >
+            <el-tag :type="getPlatformTagConfig(selectedDevice.platform).type" size="small">
               {{ getPlatformTagConfig(selectedDevice.platform).text }}
             </el-tag>
           </div>
@@ -357,11 +350,11 @@
 <script setup lang="ts">
 /*
  * 探索任务配置页面
- * 
+ *
  * 设备平台支持：
  * - Android设备：使用ADB工具进行设备检测、应用安装和管理
  * - iOS设备：使用libimobiledevice工具进行设备检测（应用安装功能暂不支持）
- * 
+ *
  * 功能说明：
  * - 自动检测Android和iOS开发环境
  * - 支持同时显示多平台设备
@@ -456,7 +449,7 @@ const DEVICE_COMMANDS = {
 // Android ADB环境状态
 const adbStatus = ref<'success' | 'error' | 'checking' | 'unknown'>('unknown');
 const adbVersion = ref<string>('');
-// iOS libimobiledevice环境状态  
+// iOS libimobiledevice环境状态
 const iosStatus = ref<'success' | 'error' | 'checking' | 'unknown'>('unknown');
 const iosVersion = ref<string>('');
 const showEnvDialog = ref(false);
@@ -536,7 +529,10 @@ const installDialog = ref({
 
 // ===== 通用工具函数 =====
 // 执行命令的通用函数
-async function executeCommand(command: string, errorPrefix: string = '命令执行失败'): Promise<{ success: boolean; stdout?: string; stderr?: string; error?: string }> {
+async function executeCommand(
+  command: string,
+  errorPrefix: string = '命令执行失败'
+): Promise<{ success: boolean; stdout?: string; stderr?: string; error?: string }> {
   if (!window.cmdAPI) {
     return { success: false, error: 'CMD API 不可用' };
   }
@@ -564,7 +560,7 @@ function addLog(message: string, status: LogStatus, output?: string, error?: str
 // 获取平台标签配置
 function getPlatformTagConfig(platform: 'android' | 'ios') {
   return {
-    type: platform === 'android' ? 'success' as const : 'primary' as const,
+    type: platform === 'android' ? ('success' as const) : ('primary' as const),
     text: platform === 'android' ? 'Android' : 'iOS'
   };
 }
@@ -611,16 +607,16 @@ const selectedDevice = computed(() => deviceList.value.find(d => d.id === form.v
 // ===== 环境检测函数 =====
 // 通用环境检测函数
 async function checkEnvironment(
-  platform: 'android' | 'ios', 
-  statusRef: Ref<EnvironmentStatus>, 
+  platform: 'android' | 'ios',
+  statusRef: Ref<EnvironmentStatus>,
   versionRef: Ref<string>
 ): Promise<boolean> {
   const config = ENVIRONMENT_CONFIG[platform];
-  
+
   statusRef.value = 'checking';
-  
+
   const result = await executeCommand(config.checkCommand, `${config.name}环境检测失败`);
-  
+
   if (result.success && result.stdout) {
     statusRef.value = 'success';
     versionRef.value = extractVersion(result.stdout, config.versionRegex);
@@ -633,12 +629,10 @@ async function checkEnvironment(
 }
 
 // 检查Android ADB环境
-const checkAdbEnvironment = (): Promise<boolean> => 
-  checkEnvironment('android', adbStatus, adbVersion);
+const checkAdbEnvironment = (): Promise<boolean> => checkEnvironment('android', adbStatus, adbVersion);
 
 // 检查iOS libimobiledevice环境
-const checkIosEnvironment = (): Promise<boolean> => 
-  checkEnvironment('ios', iosStatus, iosVersion);
+const checkIosEnvironment = (): Promise<boolean> => checkEnvironment('ios', iosStatus, iosVersion);
 
 // 显示环境配置引导
 function showEnvironmentGuide() {
@@ -664,16 +658,16 @@ function parseDeviceInfo(deviceLine: string): DeviceInfo | null {
     const status = parts[1] as 'device' | 'offline' | 'unauthorized';
 
     if (status !== 'device') {
-          // 设备未就绪，但仍然显示
-    return {
-      id: deviceId,
-      name: `${deviceId} (${status})`,
-      model: 'Unknown',
-      apiLevel: 'Unknown',
-      cpu: 'Unknown',
-      platform: 'android' as const, // Android设备
-      status
-    };
+      // 设备未就绪，但仍然显示
+      return {
+        id: deviceId,
+        name: `${deviceId} (${status})`,
+        model: 'Unknown',
+        apiLevel: 'Unknown',
+        cpu: 'Unknown',
+        platform: 'android' as const, // Android设备
+        status
+      };
     }
 
     // 解析详细信息
@@ -726,7 +720,7 @@ function parseIosDeviceInfo(deviceId: string, deviceName?: string): DeviceInfo |
 async function getDeviceDetails(deviceId: string, platform: 'android' | 'ios'): Promise<Partial<DeviceInfo>> {
   const details: Partial<DeviceInfo> = {};
   const commands = DEVICE_COMMANDS[platform];
-  
+
   try {
     // 获取API级别/版本
     const apiResult = await executeCommand(commands.getApiLevel(deviceId));
@@ -746,7 +740,7 @@ async function getDeviceDetails(deviceId: string, platform: 'android' | 'ios'): 
       const model = modelResult.stdout.trim();
       if (model && model !== 'Unknown') {
         details.model = model;
-        
+
         // iOS设备还需要获取设备名称
         if (platform === 'ios' && commands.getName) {
           const nameResult = await executeCommand(commands.getName(deviceId));
@@ -771,21 +765,20 @@ async function getDeviceDetails(deviceId: string, platform: 'android' | 'ios'): 
 async function refreshPlatformDevices(platform: 'android' | 'ios'): Promise<DeviceInfo[]> {
   const devices: DeviceInfo[] = [];
   const commands = DEVICE_COMMANDS[platform];
-  
+
   try {
     const result = await executeCommand(commands.listDevices, `${platform}设备检测失败`);
-    
+
     if (!result.success || !result.stdout) {
       console.warn(`${platform}设备检测失败:`, result.error);
       return devices;
     }
 
     const output = result.stdout;
-    
+
     if (platform === 'android') {
-      const lines = output.split('\n').filter((line: string) => 
-        line.trim() && !line.includes('List of devices'));
-      
+      const lines = output.split('\n').filter((line: string) => line.trim() && !line.includes('List of devices'));
+
       for (const line of lines) {
         const deviceInfo = parseDeviceInfo(line);
         if (deviceInfo) {
@@ -798,7 +791,7 @@ async function refreshPlatformDevices(platform: 'android' | 'ios'): Promise<Devi
       }
     } else {
       const deviceIds = output.split('\n').filter((id: string) => id.trim());
-      
+
       for (const deviceId of deviceIds) {
         const deviceInfo = parseIosDeviceInfo(deviceId.trim());
         if (deviceInfo) {
@@ -820,12 +813,9 @@ async function refreshPlatformDevices(platform: 'android' | 'ios'): Promise<Devi
 // 刷新所有设备列表
 async function refreshDevices(): Promise<void> {
   deviceLoading.value = true;
-  
+
   try {
-    const [isAdbAvailable, isIosAvailable] = await Promise.all([
-      checkAdbEnvironment(),
-      checkIosEnvironment()
-    ]);
+    const [isAdbAvailable, isIosAvailable] = await Promise.all([checkAdbEnvironment(), checkIosEnvironment()]);
 
     const allDevices: DeviceInfo[] = [];
     let androidDeviceCount = 0;
@@ -833,17 +823,17 @@ async function refreshDevices(): Promise<void> {
 
     // 并行获取设备列表
     const devicePromises: Promise<DeviceInfo[]>[] = [];
-    
+
     if (isAdbAvailable) {
       devicePromises.push(refreshPlatformDevices('android'));
     }
-    
+
     if (isIosAvailable) {
       devicePromises.push(refreshPlatformDevices('ios'));
     }
 
     const deviceResults = await Promise.all(devicePromises);
-    
+
     deviceResults.forEach((devices, index) => {
       allDevices.push(...devices);
       if (isAdbAvailable && (!isIosAvailable || index === 0)) {
@@ -873,10 +863,10 @@ async function refreshDevices(): Promise<void> {
 
 // 显示设备检测结果
 function showDeviceDetectionResult(
-  totalCount: number, 
-  androidCount: number, 
-  iosCount: number, 
-  isAdbAvailable: boolean, 
+  totalCount: number,
+  androidCount: number,
+  iosCount: number,
+  isAdbAvailable: boolean,
   isIosAvailable: boolean
 ): void {
   if (totalCount === 0) {
@@ -1054,7 +1044,12 @@ async function installApp() {
 
     const isConnected = await checkDeviceConnection(form.value.device, selectedDevice.platform);
     if (!isConnected) {
-      addLog('设备连接检查失败', 'error', '', `请确保${selectedDevice.platform === 'android' ? 'Android' : 'iOS'}设备已连接并启用调试模式`);
+      addLog(
+        '设备连接检查失败',
+        'error',
+        '',
+        `请确保${selectedDevice.platform === 'android' ? 'Android' : 'iOS'}设备已连接并启用调试模式`
+      );
       ElMessage.error('设备未连接或相关工具不可用');
       return;
     }
@@ -1166,10 +1161,7 @@ function submitForm() {
 // 页面加载时检查环境和设备
 onMounted(async () => {
   // 同时检查Android和iOS环境
-  const [isAdbAvailable, isIosAvailable] = await Promise.all([
-    checkAdbEnvironment(),
-    checkIosEnvironment()
-  ]);
+  const [isAdbAvailable, isIosAvailable] = await Promise.all([checkAdbEnvironment(), checkIosEnvironment()]);
 
   // 如果任一环境可用，则尝试获取设备列表
   if (isAdbAvailable || isIosAvailable) {

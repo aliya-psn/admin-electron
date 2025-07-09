@@ -250,7 +250,15 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, nextTick } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Refresh, Monitor, Loading, SuccessFilled, CloseBold, QuestionFilled, CircleCloseFilled } from '@element-plus/icons-vue';
+import {
+  Refresh,
+  Monitor,
+  Loading,
+  SuccessFilled,
+  CloseBold,
+  QuestionFilled,
+  CircleCloseFilled
+} from '@element-plus/icons-vue';
 
 // 使用类型断言避免与现有类型冲突
 
@@ -384,8 +392,8 @@ function generateEnvironmentItems(platform: string): EnvironmentItem[] {
       name: 'Appium Python Client',
       description: 'Appium的Python客户端库',
       checkCommand: isMac
-        ? 'python3 -c "import appium; print(f\'appium {appium.__version__}\')" 2>/dev/null || echo "模块未安装"'
-        : 'python -c "import appium; print(f\'appium {appium.__version__}\')" 2>nul || echo "模块未安装"',
+        ? 'python3 -c "import appium; print(f\'appium {appium.__version__}\')" 2>/dev/null || echo "未安装"'
+        : 'python -c "import appium; print(f\'appium {appium.__version__}\')" 2>nul || echo "未安装"',
       installCommands: isMac
         ? ['pip3 install Appium-Python-Client', 'pip3 install selenium']
         : ['pip install Appium-Python-Client', 'pip install selenium'],
@@ -480,19 +488,13 @@ function generateEnvironmentItems(platform: string): EnvironmentItem[] {
       description: 'iOS应用部署工具 (可选)',
       checkCommand: 'ios-deploy --version 2>/dev/null || echo "未安装"',
       installCommands: ['npm install -g ios-deploy'],
-      installSteps: [
-        '确保已安装Node.js和npm',
-        '全局安装：npm install -g ios-deploy',
-        '验证安装：ios-deploy --version'
-      ],
-      notes: isMac
-        ? ['需要Xcode命令行工具支持', '用于直接部署iOS应用到设备']
-        : ['Linux上功能受限，可能需要额外依赖'],
+      installSteps: ['确保已安装Node.js和npm', '全局安装：npm install -g ios-deploy', '验证安装：ios-deploy --version'],
+      notes: isMac ? ['需要Xcode命令行工具支持', '用于直接部署iOS应用到设备'] : ['Linux上功能受限，可能需要额外依赖'],
       status: 'unknown',
       checking: false,
       installing: false
     },
-        {
+    {
       key: 'xcrun',
       name: 'Xcode Command Line Tools',
       description: 'iOS开发命令行工具',
@@ -504,57 +506,49 @@ function generateEnvironmentItems(platform: string): EnvironmentItem[] {
         '等待下载和安装完成',
         '验证安装：xcrun --version'
       ],
-      notes: [
-        '包含iOS开发必需的编译工具和SDK',
-        '安装包较大，需要稳定的网络连接'
-      ],
+      notes: ['包含iOS开发必需的编译工具和SDK', '安装包较大，需要稳定的网络连接'],
       status: 'unknown',
       checking: false,
       installing: false
     },
-     {
-       key: 'ios-device-connection',
-       name: 'iOS设备连接测试',
-       description: '测试是否能够检测到连接的iOS设备',
-       checkCommand: 'idevice_id -l 2>/dev/null || echo "无设备连接"',
-       installCommands: [],
-       installSteps: [
-         '此项用于测试iOS设备连接状态',
-         '确保已安装libimobiledevice工具',
-         '使用USB连接iOS设备',
-         '在iOS设备上信任此电脑',
-         '点击"重新检测"查看连接状态'
-       ],
-       notes: [
-         '需要先安装libimobiledevice工具',
-         '首次连接需要在设备上确认信任',
-         '显示设备ID表示连接成功'
-       ],
-       status: 'unknown',
-       checking: false,
-       installing: false
-     }
-   ];
+    {
+      key: 'ios-device-connection',
+      name: 'iOS设备连接测试',
+      description: '测试是否能够检测到连接的iOS设备',
+      checkCommand: 'idevice_id -l 2>/dev/null || echo "无设备连接"',
+      installCommands: [],
+      installSteps: [
+        '此项用于测试iOS设备连接状态',
+        '确保已安装libimobiledevice工具',
+        '使用USB连接iOS设备',
+        '在iOS设备上信任此电脑',
+        '点击"重新检测"查看连接状态'
+      ],
+      notes: ['需要先安装libimobiledevice工具', '首次连接需要在设备上确认信任', '显示设备ID表示连接成功'],
+      status: 'unknown',
+      checking: false,
+      installing: false
+    }
+  ];
 
-   // 根据平台过滤不支持的环境项
-   return allItems.filter(item => {
-     // iOS 相关工具在 Windows 上不支持
-     if (isWindows && (
-       item.key === 'ios-deploy' || 
-       item.key === 'libimobiledevice' || 
-       item.key === 'ios-device-connection'
-     )) {
-       return false;
-     }
-     
-     // Xcode Command Line Tools 仅支持 macOS
-     if (item.key === 'xcrun' && !isMac) {
-       return false;
-     }
-     
-     return true;
-   }) as EnvironmentItem[];
- }
+  // 根据平台过滤不支持的环境项
+  return allItems.filter(item => {
+    // iOS 相关工具在 Windows 上不支持
+    if (
+      isWindows &&
+      (item.key === 'ios-deploy' || item.key === 'libimobiledevice' || item.key === 'ios-device-connection')
+    ) {
+      return false;
+    }
+
+    // Xcode Command Line Tools 仅支持 macOS
+    if (item.key === 'xcrun' && !isMac) {
+      return false;
+    }
+
+    return true;
+  }) as EnvironmentItem[];
+}
 
 const environmentItems = reactive<EnvironmentItem[]>([]);
 
@@ -688,29 +682,27 @@ async function checkEnvironment(item: EnvironmentItem) {
       const trimmedOutput = outputText.trim();
 
       // 检查是否为未安装或其他错误情况
-      if (trimmedOutput.includes('未安装') || 
-          trimmedOutput.includes('无设备连接') ||
-          trimmedOutput.includes('command not found') ||
-          trimmedOutput.includes('不是内部或外部命令') ||
-          trimmedOutput.includes('No module named') ||
-          trimmedOutput.includes('模块未安装')) {
+      if (
+        trimmedOutput.includes('未安装') ||
+        trimmedOutput.includes('无设备连接') ||
+        trimmedOutput.includes('command not found') ||
+        trimmedOutput.includes('不是内部或外部命令') ||
+        trimmedOutput.includes('No module named')
+      ) {
         item.status = 'error';
         if (trimmedOutput.includes('无设备连接')) {
           item.version = '无设备连接';
-        } else if (trimmedOutput.includes('No module named') || trimmedOutput.includes('模块未安装')) {
-          item.version = '模块未安装';
         }
       } else if (trimmedOutput) {
         item.status = 'success';
-        
+
         // 特殊处理iOS设备连接测试
         if (item.key === 'ios-device-connection') {
           // 检查是否包含设备UDID
-          const deviceIds = trimmedOutput.split('\n').filter((line: string) => 
-            line.trim().length > 0 && 
-            !line.includes('无设备连接')
-          );
-          
+          const deviceIds = trimmedOutput
+            .split('\n')
+            .filter((line: string) => line.trim().length > 0 && !line.includes('无设备连接'));
+
           if (deviceIds.length > 0) {
             item.version = `${deviceIds.length}个设备已连接`;
           } else {
