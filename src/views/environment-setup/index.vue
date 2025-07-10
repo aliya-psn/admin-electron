@@ -358,10 +358,7 @@ const ENVIRONMENT_CONFIGS: EnvironmentConfig[] = [
         '运行安装程序，确保勾选"Add Python to PATH"',
         '验证安装：python --version'
       ],
-      darwin: [
-        '运行 brew install python@3.11',
-        '验证安装：python3 --version'
-      ]
+      darwin: ['运行 brew install python@3.11', '验证安装：python3 --version']
     },
     notes: {
       win32: ['推荐安装Python 3.11+', '安装时必须勾选"Add Python to PATH"'],
@@ -402,15 +399,8 @@ const ENVIRONMENT_CONFIGS: EnvironmentConfig[] = [
       darwin: ['brew install node']
     },
     installSteps: {
-      win32: [
-        '从官网下载Node.js LTS版本',
-        '运行安装程序，使用默认设置',
-        '验证安装：node --version 和 npm --version'
-      ],
-      darwin: [
-        '使用Homebrew安装：brew install node',
-        '验证安装：node --version 和 npm --version'
-      ]
+      win32: ['从官网下载Node.js LTS版本', '运行安装程序，使用默认设置', '验证安装：node --version 和 npm --version'],
+      darwin: ['使用Homebrew安装：brew install node', '验证安装：node --version 和 npm --version']
     },
     notes: {
       win32: ['推荐安装LTS版本', 'npm会一起安装'],
@@ -490,10 +480,7 @@ const ENVIRONMENT_CONFIGS: EnvironmentConfig[] = [
         '重新打开命令提示符或PowerShell',
         '验证安装：输入 adb version 命令'
       ],
-      darwin: [
-        '使用Homebrew安装：brew install android-platform-tools',
-        '验证安装：adb version'
-      ]
+      darwin: ['使用Homebrew安装：brew install android-platform-tools', '验证安装：adb version']
     },
     notes: {
       win32: ['配置环境变量后可在任何目录使用adb命令', '如果检测失败，建议重启电脑'],
@@ -519,11 +506,7 @@ const ENVIRONMENT_CONFIGS: EnvironmentConfig[] = [
         '将%JAVA_HOME%\\bin添加到PATH',
         '验证安装：java -version'
       ],
-      darwin: [
-        '使用Homebrew安装：brew install openjdk@17',
-        '配置JAVA_HOME环境变量',
-        '验证安装：java -version'
-      ]
+      darwin: ['使用Homebrew安装：brew install openjdk@17', '配置JAVA_HOME环境变量', '验证安装：java -version']
     },
     notes: {
       win32: ['推荐安装JDK 11或17 LTS版本', '需要正确配置JAVA_HOME环境变量'],
@@ -619,11 +602,7 @@ const ENVIRONMENT_CONFIGS: EnvironmentConfig[] = [
         '在WSL中全局安装：npm install -g ios-deploy',
         '验证安装：wsl ios-deploy --version'
       ],
-      darwin: [
-        '确保已安装Node.js和npm',
-        '全局安装：npm install -g ios-deploy',
-        '验证安装：ios-deploy --version'
-      ]
+      darwin: ['确保已安装Node.js和npm', '全局安装：npm install -g ios-deploy', '验证安装：ios-deploy --version']
     },
     notes: {
       win32: [
@@ -747,12 +726,12 @@ const environmentStats = computed(() => {
   });
 
   const available = stats.success + stats.error + stats.unknown;
-  
+
   return {
     ...stats,
     total: environmentItems.length,
     available,
-    progress: available > 0 ? (stats.success / available * 100) : 0
+    progress: available > 0 ? (stats.success / available) * 100 : 0
   };
 });
 
@@ -762,10 +741,10 @@ const overallStatus = computed(() => {
   if (success === available && available > 0) {
     return { type: 'success', text: '环境完整', icon: 'SuccessFilled' };
   } else if (success > 0) {
-    return { 
-      type: 'warning', 
+    return {
+      type: 'warning',
       text: `部分完成 ${Math.round(progress)}% (${success}/${available})`,
-      icon: 'Warning' 
+      icon: 'Warning'
     };
   } else if (unsupported === total) {
     return { type: 'info', text: '当前平台暂不支持', icon: 'QuestionFilled' };
@@ -803,8 +782,6 @@ function handleActionButtonClick(item: EnvironmentItem) {
     installEnvironment(item);
   }
 }
-
-
 
 // 关闭安装进度对话框
 function closeInstallDialog() {
@@ -867,19 +844,19 @@ interface ErrorContext {
 
 // 错误类型映射和用户友好消息
 const ERROR_MESSAGES = {
-  '未安装': '环境未安装，请点击安装按钮进行安装',
-  '无设备连接': '未检测到设备连接，请确保设备已连接并信任此电脑',
-  '命令未找到': '命令未找到，可能未正确安装或未添加到PATH环境变量',
-  '模块未安装': 'Python模块未安装，请使用pip安装相关模块',
-  '权限不足': '权限不足，可能需要管理员权限执行',
-  '网络错误': '网络连接失败，请检查网络连接后重试',
-  '安装失败': '安装过程中出现错误，请查看详细日志'
+  未安装: '环境未安装，请点击安装按钮进行安装',
+  无设备连接: '未检测到设备连接，请确保设备已连接并信任此电脑',
+  命令未找到: '命令未找到，可能未正确安装或未添加到PATH环境变量',
+  模块未安装: 'Python模块未安装，请使用pip安装相关模块',
+  权限不足: '权限不足，可能需要管理员权限执行',
+  网络错误: '网络连接失败，请检查网络连接后重试',
+  安装失败: '安装过程中出现错误，请查看详细日志'
 };
 
 // 统一错误处理工具
 function handleError(context: ErrorContext): string {
   const { operation, item, command, originalError } = context;
-  
+
   // 记录详细错误日志
   console.error(`[${operation}] 操作失败:`, {
     item,
@@ -889,7 +866,7 @@ function handleError(context: ErrorContext): string {
 
   // 根据错误类型返回用户友好消息
   const errorStr = String(originalError || '');
-  
+
   for (const [pattern, message] of Object.entries(ERROR_MESSAGES)) {
     if (errorStr.includes(pattern) || errorStr.toLowerCase().includes(pattern.toLowerCase())) {
       return message;
@@ -919,84 +896,68 @@ function showUserMessage(type: 'success' | 'error' | 'warning' | 'info', message
   }
 }
 
-// 工具函数
-function isErrorOutput(output: string): { isError: boolean; errorType?: string } {
-  const errorPatterns = [
-    { pattern: '未安装', type: '未安装' },
-    { pattern: '无设备连接', type: '无设备连接' },
-    { pattern: 'command not found', type: '命令未找到' },
-    { pattern: '不是内部或外部命令', type: '命令未找到' },
-    { pattern: 'No module named', type: '模块未安装' },
-    { pattern: '模块未安装', type: '模块未安装' }
-  ];
-
-  for (const { pattern, type } of errorPatterns) {
-    if (output.includes(pattern)) {
-      return { isError: true, errorType: type };
-    }
-  }
-  return { isError: false };
-}
-
-function extractVersion(output: string): string {
-  const versionMatch = output.match(/\d+\.\d+\.\d+|\d+\.\d+/);
-  return versionMatch ? versionMatch[0] : '已安装';
-}
-
-function parseIosDeviceConnection(output: string): { status: EnvironmentStatus; version: string } {
-  const deviceIds = output
-    .split('\n')
-    .filter(line => line.trim().length > 0 && !line.includes('无设备连接'));
-
-  if (deviceIds.length > 0) {
-    return { status: 'success', version: `${deviceIds.length}个设备已连接` };
-  } else {
-    return { status: 'error', version: '无设备连接' };
-  }
-}
-
-function parseCommandOutput(item: EnvironmentItem, output: string): { status: EnvironmentStatus; version?: string } {
-  const trimmedOutput = output.trim();
-
-  const errorCheck = isErrorOutput(trimmedOutput);
-  if (errorCheck.isError) {
-    return { 
-      status: 'error', 
-      version: errorCheck.errorType === '无设备连接' ? '无设备连接' : 
-               errorCheck.errorType === '模块未安装' ? '模块未安装' : undefined
-    };
-  }
-
-  if (trimmedOutput) {
-    if (item.key === 'ios-device-connection') {
-      return parseIosDeviceConnection(trimmedOutput);
-    }
-    return { status: 'success', version: extractVersion(trimmedOutput) };
-  }
-
-  return { status: 'error' };
-}
-
 // 检测单个环境
 async function checkEnvironment(item: EnvironmentItem) {
   if (item.status === 'unsupported') return;
-  
+
   item.checking = true;
   item.status = 'unknown';
   item.version = undefined;
 
   try {
     const result = await (window as any).cmdAPI.exec(item.checkCommand);
-    
+    console.log(item.name, result);
+
     if (result.success) {
       const output = result.stdout || result.stderr || '';
-      const parseResult = parseCommandOutput(item, output);
-      
-      item.status = parseResult.status;
-      if (parseResult.version) {
-        item.version = parseResult.version;
+      // 命令执行成功，默认先标记为已安装
+      item.status = 'success';
+
+      if (output.trim()) {
+        // 有输出时，尝试从输出中提取版本号或判断特殊情况
+        // 1. iOS 设备连接特殊处理
+        if (item.key === 'ios-device-connection') {
+          const deviceIds = output
+            .split('\n')
+            .filter((line: string) => line.trim().length > 0 && !line.includes('无设备连接'));
+          if (deviceIds.length > 0) {
+            item.status = 'success';
+            item.version = `${deviceIds.length}个设备已连接`;
+          } else {
+            item.status = 'error';
+            item.version = '无设备连接';
+          }
+        } else {
+          // 2. 错误输出模式匹配
+          const errorPatterns = [
+            { pattern: '未安装', type: '未安装' },
+            { pattern: '无设备连接', type: '无设备连接' },
+            { pattern: 'command not found', type: '命令未找到' },
+            { pattern: '不是内部或外部命令', type: '命令未找到' },
+            { pattern: 'No module named', type: '模块未安装' },
+            { pattern: '模块未安装', type: '模块未安装' }
+          ];
+          let matched = false;
+          for (const { pattern, type } of errorPatterns) {
+            if (output.includes(pattern)) {
+              item.status = 'error';
+              item.version = type === '无设备连接' ? '无设备连接' : type === '模块未安装' ? '模块未安装' : undefined;
+              matched = true;
+              break;
+            }
+          }
+          if (!matched) {
+            // 3. 正常提取版本号
+            const versionMatch = output.match(/\d+\.\d+\.\d+|\d+\.\d+/);
+            item.version = versionMatch ? versionMatch[0] : '已安装';
+          }
+        }
+      } else {
+        // 命令执行成功但无输出，直接标记为已安装
+        item.version = '已安装';
       }
     } else {
+      // 命令执行失败
       item.status = 'error';
     }
   } catch (error) {
@@ -1019,7 +980,7 @@ async function checkAllEnvironments() {
   try {
     const batchSize = 4;
     const batches = [];
-    
+
     for (let i = 0; i < environmentItems.length; i += batchSize) {
       const batch = environmentItems.slice(i, i + batchSize);
       batches.push(batch);
