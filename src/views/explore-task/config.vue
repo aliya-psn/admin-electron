@@ -1193,6 +1193,22 @@ function closeInstallDialog() {
 function submitForm() {
   formRef.value.validate((valid: boolean) => {
     if (valid) {
+      // 获取应用和设备详细信息
+      const app = appList.value.find(a => a.id === form.value.app);
+      const device = deviceList.value?.find?.(d => d.id === form.value.device);
+
+      // 组装日志参数
+      const logParams = {
+        taskName: form.value.taskName,
+        deviceId: form.value.device,
+        deviceName: device?.name,
+        appId: form.value.app,
+        package: app?.package,
+        appVersion: app?.version
+        // 可根据实际需求补充更多参数
+      };
+      console.log(logParams);
+
       ElMessage.success('任务创建成功');
       router.push('/explore-task/execute');
     }
