@@ -1,19 +1,3 @@
-// 🔧 Windows 编码初始化 - 必须在所有导入之前执行
-if (process.platform === 'win32') {
-  // 设置进程编码
-  process.env.NODE_OPTIONS = '--max-old-space-size=4096';
-  process.env.LANG = 'zh_CN.UTF-8';
-  process.env.LC_ALL = 'zh_CN.UTF-8';
-
-  // 强制设置标准输出编码
-  if (process.stdout.setDefaultEncoding) {
-    process.stdout.setDefaultEncoding('utf8');
-  }
-  if (process.stderr.setDefaultEncoding) {
-    process.stderr.setDefaultEncoding('utf8');
-  }
-}
-
 import {
   app,
   BrowserWindow,
@@ -34,17 +18,6 @@ import mysql from 'mysql2';
 import { exec } from 'child_process';
 import { logger } from './logger.js';
 
-// Windows 控制台代码页设置（开发环境）
-if (process.platform === 'win32' && process.env.NODE_ENV === 'development') {
-  exec('chcp 65001', { encoding: 'utf8' }, error => {
-    if (error) {
-      logger.error('设置控制台代码页失败:', error.message);
-    } else {
-      logger.log('✓ 控制台代码页已设置为 UTF-8 (65001)');
-    }
-  });
-}
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const isDev = process.env.NODE_ENV === 'development';
@@ -60,9 +33,6 @@ const mysqlPool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
-  acquireTimeout: 30000, // 获取连接超时时间 30秒
-  timeout: 60000, // 查询超时时间 60秒
-  reconnect: true, // 自动重连
   idleTimeout: 60000, // 空闲连接超时时间 1分钟
   maxIdle: 10, // 最大空闲连接数
   enableKeepAlive: true, // 启用心跳包
