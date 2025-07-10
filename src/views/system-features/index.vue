@@ -327,7 +327,7 @@
 import { ref, onMounted, computed } from 'vue';
 import { ElMessage } from 'element-plus';
 import { Monitor, DocumentCopy, FolderOpened, Bell, Link, FullScreen, InfoFilled } from '@element-plus/icons-vue';
-import { execCmd } from '@/service/cmd';
+import { executeCommand } from '@/service/cmd';
 import { mysqlQuery } from '@/service/mysql';
 
 // 系统信息
@@ -867,7 +867,7 @@ const runCmd = async () => {
   }
   addLog(`执行命令: ${cmdInput.value}`, 'info');
   try {
-    const res = await execCmd(cmdInput.value);
+    const res = await executeCommand(cmdInput.value);
     if (res.success) {
       cmdResult.value = res.stdout || '[无输出]';
       addLog('命令执行成功', 'success');

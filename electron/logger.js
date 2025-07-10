@@ -8,7 +8,6 @@ const __dirname = path.dirname(__filename);
 // 日志文件目录
 const logDir = path.resolve(__dirname, '../logs');
 const LOG_RETAIN_DAYS = 7;
-const LEVELS = ['info', 'warn', 'error'];
 
 // 确保 logs 目录存在
 if (!fs.existsSync(logDir)) {

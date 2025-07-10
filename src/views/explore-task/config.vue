@@ -86,9 +86,10 @@
           </el-form-item>
           <el-form-item label="选择应用" prop="app">
             <div class="config-select-wrapper">
-              <el-select v-model="form.app" placeholder="请选择应用" style="width: 420px">
+              <el-select v-model="form.app" placeholder="请选择应用" style="width: 420px" :loading="appListLoading">
                 <el-option v-for="item in appList" :key="item.id" :label="item.name" :value="item.id" />
               </el-select>
+
               <el-button
                 type="primary"
                 text
@@ -108,14 +109,20 @@
               </el-icon>
               需要先配置可用的设备管理环境（Android/iOS）才能安装应用
             </div>
+            <div v-if="appListLoading" class="form-item-tip">
+              <el-icon class="tip-icon ml-1">
+                <Loading />
+              </el-icon>
+              正在获取应用列表...
+            </div>
           </el-form-item>
           <el-divider>应用探索测试</el-divider>
           <el-form-item label="测试时长" prop="duration" style="max-width: 100%">
             <el-radio-group v-model="form.duration">
-              <el-radio v-for="item in durationOptions" :key="item.value" :label="item.value">{{
+              <el-radio v-for="item in durationOptions" :key="item.value" :value="item.value">{{
                 item.label
               }}</el-radio>
-              <el-radio label="custom">自定义</el-radio>
+              <el-radio value="custom">自定义</el-radio>
             </el-radio-group>
             <el-input
               v-if="form.duration === 'custom'"
@@ -134,10 +141,10 @@
           </el-form-item>
           <el-form-item label="截屏间隔" prop="interval" style="max-width: 100%">
             <el-radio-group v-model="form.interval">
-              <el-radio v-for="item in intervalOptions" :key="item.value" :label="item.value">{{
+              <el-radio v-for="item in intervalOptions" :key="item.value" :value="item.value">{{
                 item.label
               }}</el-radio>
-              <el-radio label="custom">自定义</el-radio>
+              <el-radio value="custom">自定义</el-radio>
             </el-radio-group>
             <el-input
               v-if="form.interval === 'custom'"
@@ -370,21 +377,15 @@
  */
 
 import { ref, computed, watch, onMounted, type Ref } from 'vue';
-import { ElMessage, ElMessageBox } from 'element-plus';
+import { ElMessage } from 'element-plus';
 import { Plus, Loading, SuccessFilled, CloseBold, Refresh, Tools, Warning, Setting } from '@element-plus/icons-vue';
+import { executeCommand } from '@/service/cmd';
 import { useRouter } from 'vue-router';
 const router = useRouter();
 
 // ===== 类型定义 =====
 type EnvironmentStatus = 'success' | 'error' | 'checking' | 'unknown';
 type LogStatus = 'running' | 'success' | 'error';
-
-interface LogEntry {
-  message: string;
-  status: LogStatus;
-  output?: string;
-  error?: string;
-}
 
 interface AppInfo {
   id: string;
@@ -510,18 +511,19 @@ const deviceList = ref<DeviceInfo[]>([]);
 const deviceLoading = ref(false);
 
 const appList = ref<AppInfo[]>([
-  {
-    id: 'app1',
-    name: 'com.huawei.testmall',
-    package: 'com.huawei.testmall',
-    version: '1.0.0',
-    apiLevel: '40000010',
-    channel: 'Canary1',
-    vendor: 'example',
-    virtualId: 'ark9.0.0.0',
-    ability: 'EntryAbility'
-  }
+  // {
+  //   id: 'app1',
+  //   name: 'com.huawei.testmall',
+  //   package: 'com.huawei.testmall',
+  //   version: '1.0.0',
+  //   apiLevel: '40000010',
+  //   channel: 'Canary1',
+  //   vendor: 'example',
+  //   virtualId: 'ark9.0.0.0',
+  //   ability: 'EntryAbility'
+  // }
 ]);
+const appListLoading = ref(false);
 
 const modelList = [{ id: '', name: '无模型' }];
 
@@ -579,23 +581,6 @@ const installDialog = ref({
 });
 
 // ===== 通用工具函数 =====
-// 执行命令的通用函数
-async function executeCommand(
-  command: string,
-  errorPrefix: string = '命令执行失败'
-): Promise<{ success: boolean; stdout?: string; stderr?: string; error?: string }> {
-  if (!window.cmdAPI) {
-    return { success: false, error: 'CMD API 不可用' };
-  }
-
-  try {
-    const result = await window.cmdAPI.exec(command);
-    return result;
-  } catch (error) {
-    console.error(`${errorPrefix}:`, error);
-    return { success: false, error: String(error) };
-  }
-}
 
 // 提取版本信息的通用函数
 function extractVersion(output: string, regex: RegExp, fallback: string = '已安装'): string {
@@ -639,16 +624,12 @@ function generateTaskName() {
   return `Task-${year}${month}${day}-${hour}${minute}${second}`;
 }
 
-// 归档包名
-function generateArchiveName() {
-  const app = appList.value.find(a => a.id === form.value.app);
-  return app ? `${app.package}_${app.version}_Task-${generateTaskName()}_graph.zip` : '';
-}
-
 watch(
   () => form.value.app,
   _val => {
-    form.value.archiveName = generateArchiveName();
+    // 生成归档包名
+    const app = appList.value.find(a => a.id === form.value.app);
+    form.value.archiveName = app ? `${app.package}_${app.version}_Task-${generateTaskName()}_graph.zip` : '';
   }
 );
 
@@ -667,7 +648,7 @@ async function checkEnvironment(
   statusRef.value = 'checking';
 
   const result = await executeCommand(config.checkCommand, `${config.name}环境检测失败`);
-  console.log('***result**', result);
+  console.info(`${platform}检测环境`, result);
 
   if (result.success && result.stdout) {
     statusRef.value = 'success';
@@ -820,6 +801,7 @@ async function refreshPlatformDevices(platform: 'android' | 'ios'): Promise<Devi
 
   try {
     const result = await executeCommand(commands.listDevices, `${platform}设备检测失败`);
+    console.warn(`${platform}检测连接设备:`, result);
 
     if (!result.success || !result.stdout) {
       console.warn(`${platform}设备检测失败:`, result.error);
@@ -842,6 +824,7 @@ async function refreshPlatformDevices(platform: 'android' | 'ios'): Promise<Devi
         }
       }
     } else {
+      // ios
       const deviceIds = output.split('\n').filter((id: string) => id.trim());
 
       for (const deviceId of deviceIds) {
@@ -948,13 +931,11 @@ function showDeviceDetectionResult(
   }
 }
 
-// 已移至通用工具函数部分
-
-// ===== 设备连接检查函数 =====
+/*******  检查设备连接状态  开始 ***** */
 // 检查Android设备连接状态
 async function checkAndroidDeviceConnection(deviceId: string): Promise<boolean> {
   try {
-    const result = await window.cmdAPI.exec(SHELL_COMMANDS.androidCheckConnection);
+    const result = await executeCommand(SHELL_COMMANDS.androidCheckConnection);
     if (result.success && result.stdout) {
       // 检查设备是否在连接的设备列表中
       const devices = result.stdout
@@ -972,7 +953,7 @@ async function checkAndroidDeviceConnection(deviceId: string): Promise<boolean> 
 // 检查iOS设备连接状态
 async function checkIosDeviceConnection(deviceId: string): Promise<boolean> {
   try {
-    const result = await window.cmdAPI.exec(SHELL_COMMANDS.iosCheckConnection);
+    const result = await executeCommand(SHELL_COMMANDS.iosCheckConnection);
     if (result.success && result.stdout) {
       // 检查设备是否在连接的设备列表中
       const devices = result.stdout.split('\n').filter((id: string) => id.trim());
@@ -993,6 +974,7 @@ async function checkDeviceConnection(deviceId: string, platform: 'android' | 'io
     return await checkIosDeviceConnection(deviceId);
   }
 }
+/*******  检查设备连接状态  结束 ***** */
 
 // 解析APK信息
 async function parseApkInfo(apkPath: string): Promise<Partial<AppInfo> | null> {
@@ -1133,7 +1115,7 @@ async function installApp() {
     addLog('开始安装APK到设备', 'running');
 
     const installCommand = SHELL_COMMANDS.androidInstallApk(form.value.device, apkPath);
-    const installResult = await window.cmdAPI.exec(installCommand);
+    const installResult = await executeCommand(installCommand);
 
     if (!installResult.success || (installResult.stderr && installResult.stderr.includes('FAILED'))) {
       const errorMsg = installResult.stderr || installResult.error || '安装失败';
@@ -1228,9 +1210,14 @@ onMounted(async () => {
   }
 });
 
-// ===== 设备应用获取函数 =====
+/**
+ * 当前设备获取应用列表
+ * @param deviceId 设备
+ * @param platform 平台
+ */
 async function fetchDeviceApps(deviceId: string, platform: 'android' | 'ios'): Promise<AppInfo[]> {
   const apps: AppInfo[] = [];
+  appListLoading.value = true;
   try {
     if (platform === 'android') {
       // 获取所有包名
@@ -1281,6 +1268,8 @@ async function fetchDeviceApps(deviceId: string, platform: 'android' | 'ios'): P
     }
   } catch (error) {
     console.error('获取设备应用列表失败:', error);
+  } finally {
+    appListLoading.value = false;
   }
   return apps;
 }
@@ -1292,6 +1281,7 @@ watch(
     appList.value = [];
     if (!deviceId) return;
     const device = deviceList.value.find(d => d.id === deviceId);
+    console.info('获取到设备信息:', device);
     if (!device) return;
     appList.value = await fetchDeviceApps(deviceId, device.platform);
   }

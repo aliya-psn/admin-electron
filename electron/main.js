@@ -28,7 +28,7 @@ let mainWindow;
 
 // 创建 MySQL 连接池
 const mysqlPool = mysql.createPool({
-  ...databaseConfig.mysql,
+  ...databaseConfig.mysql
 });
 
 // 数据库连接健康检查
@@ -525,12 +525,18 @@ ipcMain.handle('mysql-status', async event => {
 ipcMain.handle('exec-cmd', async (event, command) => {
   return new Promise(resolve => {
     exec(command, { encoding: 'utf8' }, (error, stdout, stderr) => {
-      resolve({
+      const result = {
         success: !error,
         stdout: stdout,
         stderr: stderr,
         error: error ? error.message : null
-      });
+      };
+      if (error) {
+        logger.error('命令执行失败:', { command, error: error.message, stderr });
+      } else {
+        logger.log('命令执行成功:', { command, stdout });
+      }
+      resolve(result);
     });
   });
 });

@@ -90,6 +90,12 @@ interface ElectronAPI {
   };
 }
 
+export interface LoggerAPI {
+  log: (...args: any[]) => void;
+  error: (...args: any[]) => void;
+  warn: (...args: any[]) => void;
+}
+
 declare global {
   interface Window {
     fileAPI: FileAPI;
@@ -101,6 +107,7 @@ declare global {
     windowAPI: WindowAPI;
     cmdAPI: CmdAPI;
     electron: ElectronAPI;
+    logger?: LoggerAPI;
   }
 }
 
