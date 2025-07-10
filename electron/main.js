@@ -17,6 +17,8 @@ import os from 'os';
 import mysql from 'mysql2';
 import { exec } from 'child_process';
 import { logger } from './logger.js';
+import { databaseConfig, healthCheckConfig } from './config/database.js';
+import { config } from './config/environment.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -26,17 +28,7 @@ let mainWindow;
 
 // 创建 MySQL 连接池
 const mysqlPool = mysql.createPool({
-  host: '192.168.179.129',
-  user: 'root',
-  password: 'Swhysc@123456@',
-  database: 'cov-test',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-  idleTimeout: 60000, // 空闲连接超时时间 1分钟
-  maxIdle: 10, // 最大空闲连接数
-  enableKeepAlive: true, // 启用心跳包
-  keepAliveInitialDelay: 0 // 心跳包初始延迟
+  ...databaseConfig.mysql,
 });
 
 // 数据库连接健康检查
@@ -55,8 +47,8 @@ async function checkDatabaseConnection() {
 // 启动时检查数据库连接
 checkDatabaseConnection();
 
-// 定期检查数据库连接（每5分钟检查一次）
-setInterval(checkDatabaseConnection, 5 * 60 * 1000);
+// 定期检查数据库连接
+setInterval(checkDatabaseConnection, healthCheckConfig.interval);
 
 async function createWindow() {
   // 获取主屏幕的尺寸
@@ -78,7 +70,7 @@ async function createWindow() {
     // 设置窗口图标
     icon: path.join(__dirname, '../build/icon.png'),
     // 设置窗口标题
-    title: 'Swhy-FE',
+    title: config.app.title,
     // 窗口样式设置
     show: true, // 先隐藏窗口，等加载完成后再显示
     webPreferences: {
