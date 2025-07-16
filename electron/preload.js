@@ -137,6 +137,7 @@ contextBridge.exposeInMainWorld('electronSessionStorage', {
   }
 });
 
+// 任务执行
 contextBridge.exposeInMainWorld('electronAppiumAPI', {
   runAppiumTask: params => ipcRenderer.invoke('run-appium-task', params),
   onAppiumTaskProgress: callback => ipcRenderer.on('appium-task-progress', callback)

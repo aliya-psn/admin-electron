@@ -25,6 +25,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const isDev = process.env.NODE_ENV === 'development';
 
+// 自动设置 ANDROID_HOME/ANDROID_SDK_ROOT 环境变量
+const androidSdkPath = path.join(os.homedir(), 'Library', 'Android', 'sdk');
+process.env.ANDROID_HOME = androidSdkPath;
+process.env.ANDROID_SDK_ROOT = androidSdkPath;
+process.env.PATH = process.env.PATH + ':' + path.join(androidSdkPath, 'platform-tools');
+
 let mainWindow;
 
 // 创建 MySQL 连接池

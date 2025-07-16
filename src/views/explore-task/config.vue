@@ -628,12 +628,12 @@ function goToEnvironmentSetup() {
 function parseDeviceInfo(deviceLine: string): DeviceInfo | null {
   try {
     // 解析 "adb devices -l" 的输出行
-    // 格式: device_id	device	product:xxx model:xxx device:xxx transport_id:xxx
-    const parts = deviceLine.trim().split('\t');
-    if (parts.length < 2) return null;
-
+    // 格式: device_id	device	product:xxx model:xxx device:xxx transport_id:xxx || emulator-5554          device product:sdk_gphone64_x86_64 model:sdk_gphone64_x86_64 device:emu64xa transport_id:1
+    const parts = deviceLine.trim().split(/\s+/);
     const deviceId = parts[0];
     const status = parts[1] as 'device' | 'offline' | 'unauthorized';
+
+    if (parts.length < 2) return null;
 
     if (status !== 'device') {
       // 设备未就绪，但仍然显示
@@ -650,8 +650,11 @@ function parseDeviceInfo(deviceLine: string): DeviceInfo | null {
 
     // 解析详细信息
     const details = parts.slice(2).join(' ');
+    console.log(parts, details);
+
     const modelMatch = details.match(/model:([^\s]+)/);
     const productMatch = details.match(/product:([^\s]+)/);
+    const device = details.match(/device:([^\s]+)/);
 
     const model = modelMatch ? modelMatch[1] : 'Unknown';
     const product = productMatch ? productMatch[1] : '';
@@ -1152,16 +1155,15 @@ async function submitForm() {
         // appActivity: app?.mainActivity, // Android
         bundleId: app?.package // iOS
       };
+
       // 调用主进程 Appium 任务
-      const result = await window.electronAppiumAPI?.runAppiumTask?.(params);
+      const result = await window.electronAppiumAPI.runAppiumTask(params);
       if (result?.success) {
         ElMessage.success('自动化任务执行成功');
-
         router.push('/explore-task/execute');
       } else {
         ElMessage.error('自动化任务失败');
       }
-      // 可跳转到执行进度/结果页面
     }
   });
 }
@@ -1196,17 +1198,16 @@ async function fetchDeviceApps(deviceId: string, platform: 'android' | 'ios'): P
         .filter(Boolean);
       for (const pkg of packageNames) {
         // 获取版本号等信息
-        const versionResult = await executeCommand(DEVICE_COMMANDS.android.packageVersion(deviceId, pkg));
-        const version =
-          versionResult.success && versionResult.stdout
-            ? versionResult.stdout.match(/versionName=([\S]+)/)?.[1] || '未知'
-            : '未知';
-        // 这里只填充部分字段，如需更多可扩展
+        // const versionResult = await executeCommand(DEVICE_COMMANDS.android.packageVersion(deviceId, pkg));
+        // const version =
+        //   versionResult.success && versionResult.stdout
+        //     ? versionResult.stdout.match(/versionName=([\S]+)/)?.[1] || '未知'
+        //     : '未知';
         apps.push({
           id: pkg,
           name: pkg,
           package: pkg,
-          version: version
+          version: '-'
         });
       }
     } else if (platform === 'ios') {

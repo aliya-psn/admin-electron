@@ -112,8 +112,8 @@ declare global {
     windowAPI: WindowAPI;
     cmdAPI: CmdAPI;
     electron: ElectronAPI;
+    electronAppiumAPI: ElectronAppiumAPI;
     logger?: LoggerAPI;
-    electronAppiumAPI?: ElectronAppiumAPI;
   }
 }
 
