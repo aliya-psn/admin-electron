@@ -511,10 +511,10 @@ const form = ref({
   remark: '',
   device: '',
   app: '',
-  duration: '30',
+  duration: durationOptions[0].value,
   customDuration: 30,
-  model: '',
-  interval: '2',
+  model: modelList[0].id,
+  interval: intervalOptions[0].value,
   customInterval: 2,
   archiveName: ''
 });
@@ -1156,6 +1156,8 @@ async function submitForm() {
         bundleId: app?.package // iOS
       };
 
+      router.push('/explore-task/execute');
+
       // 调用主进程 Appium 任务
       const result = await window.electronAppiumAPI.runAppiumTask(params);
       if (result?.success) {
@@ -1195,7 +1197,8 @@ async function fetchDeviceApps(deviceId: string, platform: 'android' | 'ios'): P
       const packageNames = listResult.stdout
         .split('\n')
         .map(line => line.replace('package:', '').trim())
-        .filter(Boolean);
+        .filter(Boolean)
+        .slice(1); // 跳过第一行标题
       for (const pkg of packageNames) {
         // 获取版本号等信息
         // const versionResult = await executeCommand(DEVICE_COMMANDS.android.packageVersion(deviceId, pkg));
@@ -1213,7 +1216,7 @@ async function fetchDeviceApps(deviceId: string, platform: 'android' | 'ios'): P
     } else if (platform === 'ios') {
       const listResult = await executeCommand(DEVICE_COMMANDS.ios.listApps(deviceId)); // ideviceinstaller -u 00008020-0019349A3651002E -l
       if (!listResult.success || !listResult.stdout) return apps;
-      const lines = listResult.stdout.split('\n').filter(Boolean);
+      const lines = listResult.stdout.split('\n').filter(Boolean).slice(1); // 跳过第一行标题
       for (const line of lines) {
         // cn.com.10jqka.IHexin, "11.60.81", "同花顺"
         const [pkg, versionRaw, nameRaw] = line.split(',');

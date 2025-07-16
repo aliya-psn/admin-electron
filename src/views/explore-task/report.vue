@@ -104,7 +104,7 @@
         </template>
         <div class="map-container">
           <div class="map-view">
-            <PathMap :nodes="nodes" :edges="edges" :height="480" @node-click="onNodeClick" />
+            <PathMap :nodes="nodes" :edges="edges" :height="500" @node-click="onNodeClick" />
           </div>
 
           <div class="node-detail" v-if="selectedNode">
@@ -288,14 +288,70 @@ function onNodeClick(nodeId: number | string) {
 
 // 问题列表数据
 const issueList = ref([
-  { no: 1, type: '应用崩溃故障', subType: 'JS_ERROR', module: 'com.huawei.testmall', time: '2024-07-31 08:29:25', count: 1 },
-  { no: 2, type: '应用冻屏故障', subType: 'APP_FREEZE', module: 'com.huawei.testmall', time: '2024-07-31 08:33:42', count: 2 },
-  { no: 3, type: '进程崩溃', subType: 'CPP_CRASH', module: 'com.huawei.testmall', time: '2024-07-31 08:45:15', count: 1 },
-  { no: 4, type: '句柄泄漏故障', subType: 'HANDLE_LEAK', module: 'com.huawei.testmall.ui', time: '2024-07-31 08:50:22', count: 3 },
-  { no: 5, type: '线程泄漏故障', subType: 'THREAD_LEAK', module: 'com.huawei.testmall.network', time: '2024-07-31 08:55:18', count: 2 },
-  { no: 6, type: '内存泄漏故障', subType: 'MEMORY_LEAK', module: 'com.huawei.testmall.cache', time: '2024-07-31 09:01:33', count: 4 },
-  { no: 7, type: '应用崩溃故障', subType: 'NULL_POINTER', module: 'com.huawei.testmall.api', time: '2024-07-31 09:05:47', count: 1 },
-  { no: 8, type: '应用冻屏故障', subType: 'UI_BLOCK', module: 'com.huawei.testmall.main', time: '2024-07-31 09:12:15', count: 2 }
+  {
+    no: 1,
+    type: '应用崩溃故障',
+    subType: 'JS_ERROR',
+    module: 'com.huawei.testmall',
+    time: '2024-07-31 08:29:25',
+    count: 1
+  },
+  {
+    no: 2,
+    type: '应用冻屏故障',
+    subType: 'APP_FREEZE',
+    module: 'com.huawei.testmall',
+    time: '2024-07-31 08:33:42',
+    count: 2
+  },
+  {
+    no: 3,
+    type: '进程崩溃',
+    subType: 'CPP_CRASH',
+    module: 'com.huawei.testmall',
+    time: '2024-07-31 08:45:15',
+    count: 1
+  },
+  {
+    no: 4,
+    type: '句柄泄漏故障',
+    subType: 'HANDLE_LEAK',
+    module: 'com.huawei.testmall.ui',
+    time: '2024-07-31 08:50:22',
+    count: 3
+  },
+  {
+    no: 5,
+    type: '线程泄漏故障',
+    subType: 'THREAD_LEAK',
+    module: 'com.huawei.testmall.network',
+    time: '2024-07-31 08:55:18',
+    count: 2
+  },
+  {
+    no: 6,
+    type: '内存泄漏故障',
+    subType: 'MEMORY_LEAK',
+    module: 'com.huawei.testmall.cache',
+    time: '2024-07-31 09:01:33',
+    count: 4
+  },
+  {
+    no: 7,
+    type: '应用崩溃故障',
+    subType: 'NULL_POINTER',
+    module: 'com.huawei.testmall.api',
+    time: '2024-07-31 09:05:47',
+    count: 1
+  },
+  {
+    no: 8,
+    type: '应用冻屏故障',
+    subType: 'UI_BLOCK',
+    module: 'com.huawei.testmall.main',
+    time: '2024-07-31 09:12:15',
+    count: 2
+  }
 ]);
 
 const typeFilters = ref([
@@ -336,13 +392,15 @@ function showIssueSummary(row: any) {
 
 function getErrorMessage(subType: string) {
   const messages: { [key: string]: string } = {
-    JS_ERROR: "TypeError: Cannot read property 'data' of undefined\n    at pages/Index.js:45:12\n    at onClick (pages/Index.js:38:5)",
+    JS_ERROR:
+      "TypeError: Cannot read property 'data' of undefined\n    at pages/Index.js:45:12\n    at onClick (pages/Index.js:38:5)",
     APP_FREEZE: '应用主线程被阻塞超过5秒，可能由于主线程执行耗时操作导致',
     CPP_CRASH: 'SIGSEGV(信号11)段错误，访问了无效的内存地址',
     HANDLE_LEAK: '检测到句柄泄漏，当前进程句柄数量: 1024，超出正常范围',
     THREAD_LEAK: '检测到线程泄漏，活跃线程数: 156，部分线程未正确释放',
     MEMORY_LEAK: '检测到内存泄漏，内存使用量持续增长，当前占用: 512MB',
-    NULL_POINTER: 'NullPointerException: null对象引用\n    at com.huawei.testmall.api.ApiManager.getData(ApiManager.java:89)',
+    NULL_POINTER:
+      'NullPointerException: null对象引用\n    at com.huawei.testmall.api.ApiManager.getData(ApiManager.java:89)',
     UI_BLOCK: 'UI线程阻塞超过3秒，可能由于网络请求或数据库操作在主线程执行'
   };
   return messages[subType] || '暂无错误详情';
@@ -399,7 +457,7 @@ function goBack() {
 .map-card,
 .issues-card {
   :deep(.el-card__header) {
-    padding: 12px 16px;
+    padding: 12px 0;
     background-color: #f8f9fa;
     border-bottom: 1px solid #e4e7ed;
 
@@ -576,7 +634,6 @@ function goBack() {
 }
 
 .map-container {
-  min-height: 400px;
   display: flex;
   gap: 16px;
 
@@ -600,9 +657,8 @@ function goBack() {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 10px 12px;
+      padding: 6px 12px;
       background: #f8f9fa;
-      font-weight: 600;
       color: #303133;
       border-bottom: 1px solid #e4e7ed;
     }
@@ -613,7 +669,7 @@ function goBack() {
       .detail-row {
         display: flex;
         justify-content: space-between;
-        margin-bottom: 8px;
+        margin-bottom: 4px;
         font-size: 13px;
 
         &:last-child {
@@ -634,7 +690,7 @@ function goBack() {
 
     .detail-image {
       padding: 0 12px 12px;
-      
+
       img {
         width: 100%;
         border-radius: 4px;

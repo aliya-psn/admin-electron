@@ -3,6 +3,7 @@
     <div class="path-map-toolbar">
       <el-button size="small" @click="zoomIn">+</el-button>
       <el-button size="small" @click="zoomOut">-</el-button>
+      <el-button size="small" @click="resetView">还原</el-button>
     </div>
     <div ref="container" class="path-map-container" />
   </div>
@@ -61,12 +62,34 @@ const options = {
   }
 };
 
+const MIN_SCALE = 0.5;
+const MAX_SCALE = 2;
+const DEFAULT_SCALE = 1;
+
 const zoomIn = () => {
-  if (network) network.moveTo({ scale: (network.getScale() || 1) * 1.2 });
+  if (network) {
+    const current = network.getScale() || 1;
+    const next = Math.min(current * 1.2, MAX_SCALE);
+    network.moveTo({ scale: next });
+  }
 };
 const zoomOut = () => {
-  if (network) network.moveTo({ scale: (network.getScale() || 1) / 1.2 });
+  if (network) {
+    const current = network.getScale() || 1;
+    const next = Math.max(current / 1.2, MIN_SCALE);
+    network.moveTo({ scale: next });
+  }
 };
+
+function resetView() {
+  if (network) {
+    network.moveTo({
+      position: { x: 0, y: 0 },
+      scale: DEFAULT_SCALE,
+      animation: { duration: 400, easingFunction: 'easeInOutQuad' }
+    });
+  }
+}
 
 const pathMapHeight = computed(() =>
   props.height ? (typeof props.height === 'number' ? props.height + 'px' : props.height) : '400px'
@@ -77,7 +100,24 @@ onMounted(() => {
   edgesDS = new DataSet(props.edges);
   network = new Network(container.value!, { nodes: nodesDS, edges: edgesDS }, options);
   network.on('click', params => {
-    if (params.nodes.length) emit('node-click', params.nodes[0]);
+    if (params.nodes.length) {
+      emit('node-click', params.nodes[0]);
+      // 居中显示被点击的节点
+      network!.focus(params.nodes[0], {
+        scale: network!.getScale(),
+        animation: { duration: 400, easingFunction: 'easeInOutQuad' }
+      });
+    }
+  });
+  // 限制鼠标滚轮缩放范围
+  network.on('zoom', _params => {
+    if (!network) return;
+    const scale = network.getScale();
+    if (scale < MIN_SCALE) {
+      network.moveTo({ scale: MIN_SCALE });
+    } else if (scale > MAX_SCALE) {
+      network.moveTo({ scale: MAX_SCALE });
+    }
   });
 });
 

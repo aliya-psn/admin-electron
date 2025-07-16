@@ -22,30 +22,34 @@
         </div>
       </div>
       <div class="main-panels">
-        <el-card class="panel path-map">
-          <template #header>遍历路径地图</template>
-          <PathMap :nodes="nodes" :edges="edges" @node-click="onNodeClick" />
-          <div>节点数：{{ nodes.length }} 边数：{{ edges.length }}</div>
-        </el-card>
-        <el-card class="panel device-img">
-          <template #header>设备镜像</template>
-          <div class="show-img">
-            <img src="/images/file_1.png" alt="设备截图" />
-          </div>
-        </el-card>
-        <el-card class="panel semantic">
-          <template #header> 语义分析 </template>
-          <div class="semantic-content-row">
-            <div class="show-img semantic-img">
-              <img src="/images/file_8.png" alt="设备截图" />
+        <div class="main-panels-row">
+          <el-card class="panel path-map">
+            <template #header>遍历路径地图</template>
+            <PathMap :nodes="nodes" :edges="edges" @node-click="onNodeClick" />
+            <div>节点数：{{ nodes.length }} 边数：{{ edges.length }}</div>
+          </el-card>
+          <el-card class="panel device-img">
+            <template #header>设备镜像</template>
+            <div class="show-img">
+              <img src="/images/file_1.png" alt="设备截图" />
             </div>
-            <div class="semantic-list">
-              <div v-for="item in semanticList" :key="item.id" :class="{ active: item.active }">
-                {{ item.id }}. {{ item.text }}
+          </el-card>
+        </div>
+        <div class="main-panels-row">
+          <el-card class="panel semantic">
+            <template #header> 语义分析 </template>
+            <div class="semantic-content-row">
+              <div class="show-img semantic-img">
+                <img src="/images/file_8.png" alt="设备截图" />
+              </div>
+              <div class="semantic-list">
+                <div v-for="item in semanticList" :key="item.id" :class="{ active: item.active }">
+                  {{ item.id }}. {{ item.text }}
+                </div>
               </div>
             </div>
-          </div>
-        </el-card>
+          </el-card>
+        </div>
       </div>
       <div class="bottom-bar">
         <div class="log-title">
@@ -196,7 +200,7 @@ function goReport() {
 
 <style scoped lang="scss">
 .explore-execute {
-  padding: 20px;
+  padding: 16px;
 
   :deep(.el-steps) {
     margin-bottom: 24px;
@@ -206,7 +210,7 @@ function goReport() {
 .main-content {
   display: grid;
   grid-template-rows: auto 1fr auto;
-  gap: 20px;
+  gap: 16px;
 }
 
 .top-view {
@@ -214,7 +218,7 @@ function goReport() {
   grid-template-columns: 1fr auto auto;
   gap: 20px;
   align-items: center;
-  padding: 16px 20px;
+  padding: 12px 20px;
   background: #f8f9fa;
   border-radius: 8px;
   border: 1px solid #e4e7ed;
@@ -248,7 +252,13 @@ function goReport() {
 
 .main-panels {
   display: flex;
+  flex-direction: column;
   gap: 20px;
+
+  .main-panels-row {
+    display: flex;
+    gap: 20px;
+  }
 
   .panel {
     min-height: 360px;
@@ -258,13 +268,13 @@ function goReport() {
   }
 
   .panel.path-map {
-    flex: 3;
+    flex: 4;
   }
   .panel.device-img {
     flex: 2;
   }
   .panel.semantic {
-    flex: 3;
+    flex: 1;
   }
 
   .panel:hover {
@@ -356,7 +366,7 @@ function goReport() {
 .show-img {
   background: linear-gradient(135deg, #f5f5f5 0%, #eeeeee 100%);
   width: 100%;
-  max-width: 320px;
+  max-width: 90%;
   margin: 0 auto 12px auto;
   border-radius: 12px;
   border: 1px dashed #ddd;
