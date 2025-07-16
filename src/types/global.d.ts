@@ -90,6 +90,11 @@ interface ElectronAPI {
   };
 }
 
+interface ElectronAppiumAPI {
+  runAppiumTask: (params: any) => Promise<any>;
+  onAppiumTaskProgress: (callback: (event: any, msg: string) => void) => void;
+}
+
 export interface LoggerAPI {
   log: (...args: any[]) => void;
   error: (...args: any[]) => void;
@@ -108,6 +113,7 @@ declare global {
     cmdAPI: CmdAPI;
     electron: ElectronAPI;
     logger?: LoggerAPI;
+    electronAppiumAPI?: ElectronAppiumAPI;
   }
 }
 

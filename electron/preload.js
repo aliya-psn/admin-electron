@@ -136,3 +136,8 @@ contextBridge.exposeInMainWorld('electronSessionStorage', {
     sessionStorage.clear();
   }
 });
+
+contextBridge.exposeInMainWorld('electronAppiumAPI', {
+  runAppiumTask: params => ipcRenderer.invoke('run-appium-task', params),
+  onAppiumTaskProgress: callback => ipcRenderer.on('appium-task-progress', callback)
+});

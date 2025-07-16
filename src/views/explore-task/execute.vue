@@ -99,7 +99,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import PathMap from '@/components/PathMap/PathMap.vue';
 
@@ -136,19 +136,13 @@ const errorList = ref([
   }
 ]);
 const logLevel = ref('Info');
-const logs = ref([
-  {
-    time: '2024-07-30 14:57:54',
-    level: 'Info',
-    msg: '点击控件, [xpath]: /root/Column/Column/Row[0]/Image, [坐标]: 100,221'
-  },
-  { time: '2024-07-30 14:57:54', level: 'Info', msg: '滑动控件, [坐标]: 从540,1829 到 540,547' },
-  {
-    time: '2024-07-30 14:57:54',
-    level: 'Info',
-    msg: '点击控件, [xpath]: /root/Column/Scroll/Common/Row[0]/Image, [坐标]: 100,221'
-  }
-]);
+const logs = ref<string[]>([]);
+
+onMounted(() => {
+  window.electronAppiumAPI?.onAppiumTaskProgress?.((event, msg: string) => {
+    logs.value.push(msg);
+  });
+});
 
 // mock 路径地图数据
 // 多入口多出口示例

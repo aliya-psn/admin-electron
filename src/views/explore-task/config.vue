@@ -1139,27 +1139,29 @@ function closeInstallDialog() {
 /****** 安装安卓应用 结束 ******/
 
 // 创建任务
-function submitForm() {
-  formRef.value.validate((valid: boolean) => {
+async function submitForm() {
+  formRef.value.validate(async (valid: boolean) => {
     if (valid) {
       // 获取应用和设备详细信息
       const app = appList.value.find(a => a.id === form.value.app);
       const device = deviceList.value?.find?.(d => d.id === form.value.device);
-
-      // 组装日志参数
-      const logParams = {
-        taskName: form.value.taskName,
-        deviceId: form.value.device,
+      const params = {
+        platform: device?.platform, // 'android' | 'ios'
         deviceName: device?.name,
-        appId: form.value.app,
         package: app?.package,
-        appVersion: app?.version
-        // 可根据实际需求补充更多参数
+        // appActivity: app?.mainActivity, // Android
+        bundleId: app?.package // iOS
       };
-      console.log(logParams);
+      // 调用主进程 Appium 任务
+      const result = await window.electronAppiumAPI?.runAppiumTask?.(params);
+      if (result?.success) {
+        ElMessage.success('自动化任务执行成功');
 
-      ElMessage.success('任务创建成功');
-      router.push('/explore-task/execute');
+        router.push('/explore-task/execute');
+      } else {
+        ElMessage.error('自动化任务失败');
+      }
+      // 可跳转到执行进度/结果页面
     }
   });
 }

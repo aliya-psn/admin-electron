@@ -19,6 +19,7 @@ import { exec } from 'child_process';
 import { logger } from './logger.js';
 import { databaseConfig, healthCheckConfig } from './config/database.js';
 import { config } from './config/environment.js';
+import { runAppiumTask } from './appium/runner.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -566,6 +567,16 @@ ipcMain.handle('remove-cookie', async (event, name) => {
   return true;
 });
 /** 存储到 cookie 相关结束 */
+
+// 执行任务
+ipcMain.handle('run-appium-task', async (event, params) => {
+  const webContents = event.sender;
+  function sendProgress(msg) {
+    webContents.send('appium-task-progress', msg);
+  }
+  const result = await runAppiumTask(params, sendProgress);
+  return result;
+});
 
 app.whenReady().then(() => {
   createWindow();
