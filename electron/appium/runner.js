@@ -2,6 +2,7 @@ import { remote } from 'webdriverio';
 import http from 'http';
 import { spawn } from 'child_process';
 import path from 'path';
+import fs from 'fs';
 
 /**
  * 检查 Appium Server 是否已启动
@@ -36,25 +37,76 @@ function checkAppiumServerReady() {
   });
 }
 
-/**
- * 自动启动 Appium Server
- * @returns {Promise<ChildProcess|null>}
- */
+function checkAndroidEnvironment() {
+  // 获取平台对应的默认 SDK 路径
+  const defaultSdkPath = process.platform === 'win32'
+    ? 'C:\\Android\\Sdk'
+    : path.join(process.env.HOME, 'Library', 'Android', 'sdk');
+
+  const sdkPath = process.env.ANDROID_HOME || defaultSdkPath;
+  
+  // 检查 SDK 目录是否存在
+  if (!fs.existsSync(sdkPath)) {
+    console.error(`[ERROR] Android SDK 路径不存在: ${sdkPath}`);
+    return false;
+  }
+
+  // 检查 adb 是否存在
+  const adbPath = getPlatformAdbPath(sdkPath);
+  if (!fs.existsSync(adbPath)) {
+    console.error(`[ERROR] 未找到 adb: ${adbPath}`);
+    return false;
+  }
+
+  return true;
+}
+
+function resolveAppiumBinPath() {
+  if (process.platform === 'win32') {
+    return [
+      { path: 'npx', args: ['appium'] },
+      { path: 'appium.cmd', args: [] }
+    ];
+  } else {
+    return [
+      { path: 'npx', args: ['appium'] },
+      { path: path.join(__dirname, '../../node_modules/.bin/appium'), args: [] }
+    ];
+  }
+}
+
 function startAppiumServer() {
-  // 1. 指定 appium 路径
-  const appiumPath = 'appium'; // 或 path.resolve(__dirname, '../../node_modules/.bin/appium')
+  // 1. 环境检查
+  if (!checkAndroidEnvironment()) {
+    return null;
+  }
 
-  // 2. 指定参数
-  const args = ['--port', '4723', '--log-level', 'info'];
+  // 2. 动态选择路径
+  const options = resolveAppiumBinPath();
+  let appiumPath, args;
 
-  // 4. 启动
-  console.log('[startAppiumServer] 启动 Appium Server:', appiumPath, args);
+  for (const option of options) {
+    try {
+      if (option.path === 'npx' || fs.existsSync(option.path)) {
+        appiumPath = option.path;
+        args = ['--port', '4723', '--log-level', 'info', ...option.args];
+        break;
+      }
+    } catch (e) {
+      console.log(`[startAppiumServer] 路径 ${option.path} 不可用:`, e.message);
+    }
+  }
+
+  // 3. 启动子进程
   const child = spawn(appiumPath, args, {
-    detached: true,
-    stdio: 'ignore'
+    env: getPlatformEnv(),
+    stdio: 'pipe',
+    shell: true
   });
-  child.unref();
-  console.log('[startAppiumServer] Appium Server 进程已启动，PID:', child.pid);
+
+  child.stdout.on('data', (data) => console.log(`[Appium] ${data}`));
+  child.stderr.on('data', (data) => console.error(`[Appium] ${data}`));
+
   return child;
 }
 
@@ -103,10 +155,23 @@ export async function runAppiumTask(params, onProgress) {
   let ready = await checkAppiumServerReady();
   if (!ready) {
     log('Appium Server 未启动，尝试自动启动...');
-    startAppiumServer();
+    const child = startAppiumServer();
+    
+    if (!child) {
+      log('无法启动Appium Server！');
+      log('请确保已安装Appium: npm install -g appium');
+      log('或者安装为开发依赖: npm install appium --save-dev');
+      log('在Windows上，也可以使用: npm install -g @appium/cli');
+      return { success: false, logs };
+    }
+    
     ready = await waitForAppiumServer(15000);
     if (!ready) {
       log('Appium Server 启动失败，请检查环境！');
+      log('常见解决方案:');
+      log('1. 安装Appium: npm install -g appium');
+      log('2. 确保Node.js版本兼容');
+      log('3. 检查防火墙设置');
       return { success: false, logs };
     }
     console.log('[runAppiumTask] Appium Server 启动成功！');

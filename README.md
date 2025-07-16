@@ -1,6 +1,8 @@
 ## 🚀 依赖安装
 
 ```bash
+# node版本要求
+webdrivers要求: 20 || >=22  
 # 因为需要安装 electron，建议使用yarn
 yarn config set registry https://registry.npmmirror.com
 yarn config set electron_mirror https://cdn.npmmirror.com/binaries/electron/
