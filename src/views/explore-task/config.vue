@@ -218,13 +218,9 @@
 
         <el-card class="info-card" v-if="selectedApp">
           <template #header>应用信息</template>
+          <div>应用名：{{ selectedApp.name }}</div>
           <div>应用包名：{{ selectedApp.package }}</div>
           <div>应用版本：{{ selectedApp.version }}</div>
-          <div>API版本：{{ selectedApp.apiLevel }}</div>
-          <div>分发类型：{{ selectedApp.channel }}</div>
-          <div>开发厂商：{{ selectedApp.vendor }}</div>
-          <div>虚拟设备号：{{ selectedApp.virtualId }}</div>
-          <div>主Ability：{{ selectedApp.ability }}</div>
         </el-card>
 
         <el-card class="info-card">
@@ -392,11 +388,6 @@ interface AppInfo {
   name: string;
   package: string;
   version: string;
-  apiLevel: string;
-  channel: string;
-  vendor: string;
-  virtualId: string;
-  ability: string;
 }
 
 interface DeviceInfo {
@@ -409,19 +400,6 @@ interface DeviceInfo {
   status?: 'device' | 'offline' | 'unauthorized';
 }
 
-// ===== 常量配置 =====
-const APP_INSTALL_DEFAULTS = {
-  version: '1.0.0',
-  apiLevel: '30',
-  channel: 'Custom',
-  vendor: 'Unknown',
-  virtualId: 'custom',
-  ability: 'MainActivity',
-  packagePrefix: 'com.example.',
-  appName: 'Unknown App',
-  fallbackPackage: 'com.unknown.app'
-} as const;
-
 // ===== 获取平台特定命令的函数 =====
 function getPlatformCommand(baseCommand: string): string {
   const platform = navigator.platform.toLowerCase();
@@ -431,40 +409,52 @@ function getPlatformCommand(baseCommand: string): string {
   return baseCommand;
 }
 
-// ===== Shell 指令常量/方法集中管理 =====
-const SHELL_COMMANDS = {
-  // 环境检测
-  adbVersion: 'adb version',
-  iosVersion: getPlatformCommand('idevice_id --version'),
-  // 设备列表
-  androidListDevices: 'adb devices -l',
-  iosListDevices: getPlatformCommand('idevice_id -l'),
-  // Android 设备详细
-  androidGetApiLevel: (deviceId: string) => `adb -s ${deviceId} shell getprop ro.build.version.sdk`,
-  androidGetCpu: (deviceId: string) => `adb -s ${deviceId} shell getprop ro.product.cpu.abi`,
-  androidGetModel: (deviceId: string) => `adb -s ${deviceId} shell getprop ro.product.model`,
-  // iOS 设备详细
-  iosGetApiLevel: (deviceId: string) => getPlatformCommand(`ideviceinfo -u ${deviceId} -k ProductVersion`),
-  iosGetCpu: (deviceId: string) => getPlatformCommand(`ideviceinfo -u ${deviceId} -k CPUArchitecture`),
-  iosGetModel: (deviceId: string) => getPlatformCommand(`ideviceinfo -u ${deviceId} -k ProductType`),
-  iosGetName: (deviceId: string) => getPlatformCommand(`ideviceinfo -u ${deviceId} -k DeviceName`),
-  // Android 应用相关
-  androidListPackages: (deviceId: string) => `adb -s ${deviceId} shell pm list packages`,
-  androidPackageVersion: (deviceId: string, pkg: string) =>
-    `adb -s ${deviceId} shell dumpsys package ${pkg} | grep versionName`,
-  // iOS 应用相关
-  iosListApps: (deviceId: string) => getPlatformCommand(`ideviceinstaller -u ${deviceId} -l`),
-  // APK 解析
-  parseApk: (apkPath: string) => `aapt dump badging "${apkPath}"`,
-  // Android 安装 APK
-  androidInstallApk: (deviceId: string, apkPath: string) => `adb -s ${deviceId} install -r "${apkPath}"`,
-  // Android 检查连接
-  androidCheckConnection: 'adb devices',
-  // iOS 检查连接
-  iosCheckConnection: getPlatformCommand('idevice_id -l')
-};
+// ===== 设备命令集中管理 =====
+// DEVICE_COMMANDS 统一管理 Android/iOS 相关的 shell 指令，便于维护和调用
+const DEVICE_COMMANDS = {
+  android: {
+    // 获取设备列表
+    listDevices: 'adb devices -l',
+    // 检查设备连接
+    checkConnection: 'adb devices',
+    // 获取 Android 设备 API Level
+    getApiLevel: (deviceId: string) => `adb -s ${deviceId} shell getprop ro.build.version.sdk`,
+    // 获取 CPU 架构
+    getCpu: (deviceId: string) => `adb -s ${deviceId} shell getprop ro.product.cpu.abi`,
+    // 获取设备型号
+    getModel: (deviceId: string) => `adb -s ${deviceId} shell getprop ro.product.model`,
+    // 获取设备名称（Android 无）
+    getName: undefined,
+    // 获取已安装包名列表
+    listPackages: (deviceId: string) => `adb -s ${deviceId} shell pm list packages`,
+    // 获取指定包的版本号
+    packageVersion: (deviceId: string, pkg: string) =>
+      `adb -s ${deviceId} shell dumpsys package ${pkg} | grep versionName`,
+    // 安装 APK
+    installApk: (deviceId: string, apkPath: string) => `adb -s ${deviceId} install -r "${apkPath}"`,
+    // 解析 APK 信息
+    parseApk: (apkPath: string) => `aapt dump badging "${apkPath}"`
+  },
+  ios: {
+    // 获取设备列表
+    listDevices: getPlatformCommand('idevice_id -l'),
+    // 检查设备连接
+    checkConnection: getPlatformCommand('idevice_id -l'),
+    // 获取 iOS 设备系统版本
+    getApiLevel: (deviceId: string) => getPlatformCommand(`ideviceinfo -u ${deviceId} -k ProductVersion`),
+    // 获取 CPU 架构
+    getCpu: (deviceId: string) => getPlatformCommand(`ideviceinfo -u ${deviceId} -k CPUArchitecture`),
+    // 获取设备型号
+    getModel: (deviceId: string) => getPlatformCommand(`ideviceinfo -u ${deviceId} -k ProductType`),
+    // 获取设备名称
+    getName: (deviceId: string) => getPlatformCommand(`ideviceinfo -u ${deviceId} -k DeviceName`),
+    // 获取已安装应用列表
+    listApps: (deviceId: string) => getPlatformCommand(`ideviceinstaller -u ${deviceId} -l`)
+  }
+} as const;
 
-// ===== 环境检测相关配置（恢复原始定义） =====
+// ===== 环境检测相关配置 =====
+// ENVIRONMENT_CONFIG 用于环境检测的命令和正则
 const ENVIRONMENT_CONFIG = {
   android: {
     checkCommand: 'adb version',
@@ -478,25 +468,6 @@ const ENVIRONMENT_CONFIG = {
   }
 } as const;
 
-const DEVICE_COMMANDS = {
-  android: {
-    listDevices: 'adb devices -l',
-    checkConnection: 'adb devices',
-    getApiLevel: (deviceId: string) => `adb -s ${deviceId} shell getprop ro.build.version.sdk`,
-    getCpu: (deviceId: string) => `adb -s ${deviceId} shell getprop ro.product.cpu.abi`,
-    getModel: (deviceId: string) => `adb -s ${deviceId} shell getprop ro.product.model`,
-    getName: undefined
-  },
-  ios: {
-    listDevices: getPlatformCommand('idevice_id -l'),
-    checkConnection: getPlatformCommand('idevice_id -l'),
-    getApiLevel: (deviceId: string) => getPlatformCommand(`ideviceinfo -u ${deviceId} -k ProductVersion`),
-    getCpu: (deviceId: string) => getPlatformCommand(`ideviceinfo -u ${deviceId} -k CPUArchitecture`),
-    getModel: (deviceId: string) => getPlatformCommand(`ideviceinfo -u ${deviceId} -k ProductType`),
-    getName: (deviceId: string) => getPlatformCommand(`ideviceinfo -u ${deviceId} -k DeviceName`)
-  }
-} as const;
-
 // ===== 环境检测相关状态 =====
 // Android ADB环境状态
 const adbStatus = ref<'success' | 'error' | 'checking' | 'unknown'>('unknown');
@@ -504,29 +475,21 @@ const adbVersion = ref<string>('');
 // iOS libimobiledevice环境状态
 const iosStatus = ref<'success' | 'error' | 'checking' | 'unknown'>('unknown');
 const iosVersion = ref<string>('');
+// 环境配置引导
 const showEnvDialog = ref(false);
 
 // 设备相关状态
 const deviceList = ref<DeviceInfo[]>([]);
 const deviceLoading = ref(false);
 
-const appList = ref<AppInfo[]>([
-  // {
-  //   id: 'app1',
-  //   name: 'com.huawei.testmall',
-  //   package: 'com.huawei.testmall',
-  //   version: '1.0.0',
-  //   apiLevel: '40000010',
-  //   channel: 'Canary1',
-  //   vendor: 'example',
-  //   virtualId: 'ark9.0.0.0',
-  //   ability: 'EntryAbility'
-  // }
-]);
+// 应用相关
+const appList = ref<AppInfo[]>([]);
 const appListLoading = ref(false);
 
-const modelList = [{ id: '', name: '无模型' }];
+// 模型列表
+const modelList = [{ id: 'qwen2.5-vl-72b', name: 'Qwen2.5-VL-72B' }];
 
+// 测试时长
 const durationOptions = [
   { value: '30', label: '0.5小时' },
   { value: '60', label: '1小时' },
@@ -534,6 +497,7 @@ const durationOptions = [
   { value: '360', label: '6小时' },
   { value: '1440', label: '24小时' }
 ];
+// 截屏间隔
 const intervalOptions = [
   { value: '2', label: '2秒' },
   { value: '4', label: '4秒' },
@@ -564,33 +528,12 @@ const rules = {
   archiveName: [{ required: true, message: '请输入归档包名', trigger: 'blur' }]
 };
 
-// 安装相关状态
-const installing = ref(false);
-const installDialog = ref({
-  visible: false,
-  title: '',
-  currentStep: 0,
-  totalSteps: 0,
-  currentCommand: '',
-  logs: [] as Array<{
-    message: string;
-    status: 'running' | 'success' | 'error';
-    output?: string;
-    error?: string;
-  }>
-});
-
 // ===== 通用工具函数 =====
 
 // 提取版本信息的通用函数
 function extractVersion(output: string, regex: RegExp, fallback: string = '已安装'): string {
   const match = output.match(regex);
   return match ? match[1] : fallback;
-}
-
-// 添加日志条目
-function addLog(message: string, status: LogStatus, output?: string, error?: string): void {
-  installDialog.value.logs.push({ message, status, output, error });
 }
 
 // 获取平台标签配置
@@ -624,11 +567,13 @@ function generateTaskName() {
   return `Task-${year}${month}${day}-${hour}${minute}${second}`;
 }
 
+// 选择了应用
 watch(
   () => form.value.app,
   _val => {
     // 生成归档包名
     const app = appList.value.find(a => a.id === form.value.app);
+    console.log(app);
     form.value.archiveName = app ? `${app.package}_${app.version}_Task-${generateTaskName()}_graph.zip` : '';
   }
 );
@@ -800,7 +745,7 @@ async function refreshPlatformDevices(platform: 'android' | 'ios'): Promise<Devi
   const commands = DEVICE_COMMANDS[platform];
 
   try {
-    const result = await executeCommand(commands.listDevices, `${platform}设备检测失败`);
+    const result = await executeCommand(commands.listDevices, `${platform}设备检测失败`); // idevice_id -l || adb devices -l
     console.warn(`${platform}检测连接设备:`, result);
 
     if (!result.success || !result.stdout) {
@@ -935,7 +880,7 @@ function showDeviceDetectionResult(
 // 检查Android设备连接状态
 async function checkAndroidDeviceConnection(deviceId: string): Promise<boolean> {
   try {
-    const result = await executeCommand(SHELL_COMMANDS.androidCheckConnection);
+    const result = await executeCommand(DEVICE_COMMANDS.android.checkConnection);
     if (result.success && result.stdout) {
       // 检查设备是否在连接的设备列表中
       const devices = result.stdout
@@ -953,7 +898,7 @@ async function checkAndroidDeviceConnection(deviceId: string): Promise<boolean> 
 // 检查iOS设备连接状态
 async function checkIosDeviceConnection(deviceId: string): Promise<boolean> {
   try {
-    const result = await executeCommand(SHELL_COMMANDS.iosCheckConnection);
+    const result = await executeCommand(DEVICE_COMMANDS.ios.checkConnection);
     if (result.success && result.stdout) {
       // 检查设备是否在连接的设备列表中
       const devices = result.stdout.split('\n').filter((id: string) => id.trim());
@@ -976,43 +921,27 @@ async function checkDeviceConnection(deviceId: string, platform: 'android' | 'io
 }
 /*******  检查设备连接状态  结束 ***** */
 
-// 解析APK信息
-async function parseApkInfo(apkPath: string): Promise<Partial<AppInfo> | null> {
-  try {
-    // 使用aapt或者其他工具解析APK信息
-    const cmdResult = await executeCommand(SHELL_COMMANDS.parseApk(apkPath));
-    if (cmdResult.success && cmdResult.stdout) {
-      const packageMatch = cmdResult.stdout.match(/package: name='([^']+)'/);
-      const versionMatch = cmdResult.stdout.match(/versionName='([^']+)'/);
-      const apiLevelMatch = cmdResult.stdout.match(/targetSdkVersion:'([^']+)'/);
-      if (packageMatch) {
-        return {
-          package: packageMatch[1],
-          version: versionMatch ? versionMatch[1] : APP_INSTALL_DEFAULTS.version,
-          apiLevel: apiLevelMatch ? apiLevelMatch[1] : APP_INSTALL_DEFAULTS.apiLevel,
-          channel: APP_INSTALL_DEFAULTS.channel,
-          vendor: APP_INSTALL_DEFAULTS.vendor,
-          virtualId: APP_INSTALL_DEFAULTS.virtualId,
-          ability: APP_INSTALL_DEFAULTS.ability
-        };
-      }
-    }
-    // 如果aapt不可用，从文件名提取基本信息
-    const fileName = apkPath.split(/[/\\]/).pop() || 'unknown.apk';
-    const baseName = fileName.replace('.apk', '');
-    return {
-      package: `${APP_INSTALL_DEFAULTS.packagePrefix}${baseName.toLowerCase()}`,
-      version: APP_INSTALL_DEFAULTS.version,
-      apiLevel: APP_INSTALL_DEFAULTS.apiLevel,
-      channel: APP_INSTALL_DEFAULTS.channel,
-      vendor: APP_INSTALL_DEFAULTS.vendor,
-      virtualId: APP_INSTALL_DEFAULTS.virtualId,
-      ability: APP_INSTALL_DEFAULTS.ability
-    };
-  } catch (error) {
-    console.error('解析APK信息失败:', error);
-    return null;
-  }
+/****** 安装安卓应用 开始 ******/
+
+// 安卓应用安装相关状态
+const installing = ref(false);
+const installDialog = ref({
+  visible: false,
+  title: '',
+  currentStep: 0,
+  totalSteps: 0,
+  currentCommand: '',
+  logs: [] as Array<{
+    message: string;
+    status: 'running' | 'success' | 'error';
+    output?: string;
+    error?: string;
+  }>
+});
+
+// 安装 app 添加日志条目
+function installAppLog(message: string, status: LogStatus, output?: string, error?: string): void {
+  installDialog.value.logs.push({ message, status, output, error });
 }
 
 // 安装应用主函数
@@ -1081,11 +1010,11 @@ async function installApp() {
     // 步骤1: 检查设备连接
     installDialog.value.currentStep = 1;
     installDialog.value.currentCommand = '检查设备连接状态...';
-    addLog('检查设备连接状态', 'running');
+    installAppLog('检查设备连接状态', 'running');
 
     const isConnected = await checkDeviceConnection(form.value.device, selectedDevice.platform);
     if (!isConnected) {
-      addLog(
+      installAppLog(
         '设备连接检查失败',
         'error',
         '',
@@ -1094,54 +1023,50 @@ async function installApp() {
       ElMessage.error('设备未连接或相关工具不可用');
       return;
     }
-    addLog('设备连接正常', 'success');
+    installAppLog('设备连接正常', 'success');
 
     // 步骤2: 解析APK信息
     installDialog.value.currentStep = 2;
     installDialog.value.currentCommand = '解析APK信息...';
-    addLog('解析APK信息', 'running');
+    installAppLog('解析APK信息', 'running');
 
     const apkInfo = await parseApkInfo(apkPath);
     if (!apkInfo) {
-      addLog('APK信息解析失败', 'error');
+      installAppLog('APK信息解析失败', 'error');
       ElMessage.error('APK文件信息解析失败');
       return;
     }
-    addLog(`解析成功: ${apkInfo.package}`, 'success');
+    installAppLog(`解析成功: ${apkInfo.package}`, 'success');
 
     // 步骤3: 安装APK
     installDialog.value.currentStep = 3;
     installDialog.value.currentCommand = `安装APK: ${apkPath}`;
-    addLog('开始安装APK到设备', 'running');
+    installAppLog('开始安装APK到设备', 'running');
 
-    const installCommand = SHELL_COMMANDS.androidInstallApk(form.value.device, apkPath);
+    const installCommand = DEVICE_COMMANDS.android.installApk(form.value.device, apkPath);
     const installResult = await executeCommand(installCommand);
 
     if (!installResult.success || (installResult.stderr && installResult.stderr.includes('FAILED'))) {
       const errorMsg = installResult.stderr || installResult.error || '安装失败';
-      addLog('APK安装失败', 'error', '', errorMsg);
+      installAppLog('APK安装失败', 'error', '', errorMsg);
       ElMessage.error('应用安装失败');
       return;
     }
-    addLog('APK安装成功', 'success', installResult.stdout);
+    installAppLog('APK安装成功', 'success', installResult.stdout);
 
     // 步骤4: 更新应用列表
     installDialog.value.currentStep = 4;
     installDialog.value.currentCommand = '更新应用列表...';
-    addLog('更新应用列表', 'running');
+    installAppLog('更新应用列表', 'running');
 
     // 生成新的应用ID
     const newAppId = `app_${Date.now()}`;
+    // 安装新应用时，组装 AppInfo 对象
     const newApp: AppInfo = {
       id: newAppId,
-      name: apkInfo.package || APP_INSTALL_DEFAULTS.appName,
-      package: apkInfo.package || APP_INSTALL_DEFAULTS.fallbackPackage,
-      version: apkInfo.version || APP_INSTALL_DEFAULTS.version,
-      apiLevel: apkInfo.apiLevel || APP_INSTALL_DEFAULTS.apiLevel,
-      channel: apkInfo.channel || APP_INSTALL_DEFAULTS.channel,
-      vendor: apkInfo.vendor || APP_INSTALL_DEFAULTS.vendor,
-      virtualId: apkInfo.virtualId || APP_INSTALL_DEFAULTS.virtualId,
-      ability: apkInfo.ability || APP_INSTALL_DEFAULTS.ability
+      name: apkInfo.package || '', // 这里可根据实际 APK 解析结果补充更多字段
+      package: apkInfo.package || '',
+      version: apkInfo.version || ''
     };
 
     // 检查是否已存在相同包名的应用
@@ -1149,25 +1074,46 @@ async function installApp() {
     if (existingIndex !== -1) {
       // 更新现有应用
       appList.value[existingIndex] = newApp;
-      addLog('应用信息已更新', 'success');
+      installAppLog('应用信息已更新', 'success');
     } else {
       // 添加新应用
       appList.value.push(newApp);
-      addLog('新应用已添加到列表', 'success');
+      installAppLog('新应用已添加到列表', 'success');
     }
 
     // 自动选择新安装的应用
     form.value.app = newAppId;
 
     ElMessage.success('应用安装完成！');
-    addLog('应用安装流程完成', 'success');
+    installAppLog('应用安装流程完成', 'success');
   } catch (error) {
     console.error('安装应用时发生错误:', error);
-    addLog('安装过程异常', 'error', '', String(error));
+    installAppLog('安装过程异常', 'error', '', String(error));
     ElMessage.error('安装过程中发生错误');
   } finally {
     installing.value = false;
     installDialog.value.currentStep = installDialog.value.totalSteps;
+  }
+}
+
+// 解析APK信息
+async function parseApkInfo(apkPath: string): Promise<Partial<AppInfo> | null> {
+  try {
+    // 使用 aapt 或其他工具解析 APK 信息
+    const cmdResult = await executeCommand(DEVICE_COMMANDS.android.parseApk(apkPath));
+    if (cmdResult.success && cmdResult.stdout) {
+      const packageMatch = cmdResult.stdout.match(/package: name='([^']+)'/);
+      const versionMatch = cmdResult.stdout.match(/versionName='([^']+)'/);
+      return {
+        package: packageMatch ? packageMatch[1] : '',
+        version: versionMatch ? versionMatch[1] : ''
+      };
+    }
+    // 如果 aapt 不可用，返回 null
+    return null;
+  } catch (error) {
+    console.error('解析APK信息失败:', error);
+    return null;
   }
 }
 
@@ -1190,6 +1136,9 @@ function closeInstallDialog() {
   }
 }
 
+/****** 安装安卓应用 结束 ******/
+
+// 创建任务
 function submitForm() {
   formRef.value.validate((valid: boolean) => {
     if (valid) {
@@ -1237,7 +1186,7 @@ async function fetchDeviceApps(deviceId: string, platform: 'android' | 'ios'): P
   try {
     if (platform === 'android') {
       // 获取所有包名
-      const listResult = await executeCommand(SHELL_COMMANDS.androidListPackages(deviceId));
+      const listResult = await executeCommand(DEVICE_COMMANDS.android.listPackages(deviceId));
       if (!listResult.success || !listResult.stdout) return apps;
       const packageNames = listResult.stdout
         .split('\n')
@@ -1245,7 +1194,7 @@ async function fetchDeviceApps(deviceId: string, platform: 'android' | 'ios'): P
         .filter(Boolean);
       for (const pkg of packageNames) {
         // 获取版本号等信息
-        const versionResult = await executeCommand(SHELL_COMMANDS.androidPackageVersion(deviceId, pkg));
+        const versionResult = await executeCommand(DEVICE_COMMANDS.android.packageVersion(deviceId, pkg));
         const version =
           versionResult.success && versionResult.stdout
             ? versionResult.stdout.match(/versionName=([\S]+)/)?.[1] || '未知'
@@ -1255,30 +1204,25 @@ async function fetchDeviceApps(deviceId: string, platform: 'android' | 'ios'): P
           id: pkg,
           name: pkg,
           package: pkg,
-          version: version,
-          apiLevel: '未知',
-          channel: '',
-          vendor: '',
-          virtualId: '',
-          ability: ''
+          version: version
         });
       }
     } else if (platform === 'ios') {
-      const listResult = await executeCommand(SHELL_COMMANDS.iosListApps(deviceId));
+      const listResult = await executeCommand(DEVICE_COMMANDS.ios.listApps(deviceId)); // ideviceinstaller -u 00008020-0019349A3651002E -l
       if (!listResult.success || !listResult.stdout) return apps;
       const lines = listResult.stdout.split('\n').filter(Boolean);
       for (const line of lines) {
-        const [pkg, name, version] = line.split(' - ');
+        // cn.com.10jqka.IHexin, "11.60.81", "同花顺"
+        const [pkg, versionRaw, nameRaw] = line.split(',');
+        // 去除引号和空格
+        const version = versionRaw?.replace(/[" ]/g, '') || '';
+        const name = nameRaw?.replace(/[" ]/g, '') || pkg;
+
         apps.push({
           id: pkg,
-          name: name || pkg,
+          name,
           package: pkg,
-          version: version || '',
-          apiLevel: '',
-          channel: '',
-          vendor: '',
-          virtualId: '',
-          ability: ''
+          version
         });
       }
     }

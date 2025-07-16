@@ -410,6 +410,7 @@ const refreshSystemInfo = async () => {
     if (typeof window !== 'undefined' && window.systemAPI) {
       const result = await window.systemAPI.getAll();
       if (result.success) {
+        console.info('系统信息：', result.data);
         systemInfo.value = result.data;
         addLog('系统信息刷新成功', 'success');
       } else {

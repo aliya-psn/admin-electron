@@ -584,37 +584,37 @@ const ENVIRONMENT_CONFIGS: EnvironmentConfig[] = [
       darwin: ['确保iOS设备已启用"信任此电脑"', '首次连接设备时需要在设备上确认信任']
     }
   },
-  {
-    key: 'ios-deploy',
-    name: 'ios-deploy',
-    description: 'iOS应用部署工具 (可选)',
-    checkCommand: {
-      win32: 'wsl ios-deploy --version',
-      darwin: 'ios-deploy --version'
-    },
-    installCommands: {
-      win32: [], // Windows需要手动安装
-      darwin: ['npm install -g ios-deploy']
-    },
-    installSteps: {
-      win32: [
-        '确保已安装WSL和Node.js',
-        '在WSL中全局安装：npm install -g ios-deploy',
-        '验证安装：wsl ios-deploy --version'
-      ],
-      darwin: ['确保已安装Node.js和npm', '全局安装：npm install -g ios-deploy', '验证安装：ios-deploy --version']
-    },
-    notes: {
-      win32: [
-        '需要先安装WSL（Windows Subsystem for Linux）',
-        '在WSL中安装Node.js和npm',
-        '用于直接部署iOS应用到设备',
-        '使用wsl命令前缀在Windows中调用Linux工具',
-        '建议先安装WSL，然后在WSL环境中安装iOS工具'
-      ],
-      darwin: ['需要Xcode命令行工具支持', '用于直接部署iOS应用到设备']
-    }
-  },
+  // {
+  //   key: 'ios-deploy',
+  //   name: 'ios-deploy',
+  //   description: 'iOS应用部署工具 (可选)，前提安装了 XCode',
+  //   checkCommand: {
+  //     win32: 'wsl ios-deploy --version',
+  //     darwin: 'ios-deploy --version'
+  //   },
+  //   installCommands: {
+  //     win32: [], // Windows需要手动安装
+  //     darwin: ['npm install -g ios-deploy']
+  //   },
+  //   installSteps: {
+  //     win32: [
+  //       '确保已安装WSL和Node.js',
+  //       '在WSL中全局安装：npm install -g ios-deploy',
+  //       '验证安装：wsl ios-deploy --version'
+  //     ],
+  //     darwin: ['确保已安装Node.js和npm', '全局安装：npm install -g ios-deploy', '验证安装：ios-deploy --version']
+  //   },
+  //   notes: {
+  //     win32: [
+  //       '需要先安装WSL（Windows Subsystem for Linux）',
+  //       '在WSL中安装Node.js和npm',
+  //       '用于直接部署iOS应用到设备',
+  //       '使用wsl命令前缀在Windows中调用Linux工具',
+  //       '建议先安装WSL，然后在WSL环境中安装iOS工具'
+  //     ],
+  //     darwin: ['需要Xcode命令行工具支持', '用于直接部署iOS应用到设备']
+  //   }
+  // },
   {
     key: 'xcrun',
     name: 'Xcode Command Line Tools',
