@@ -49,39 +49,28 @@
 import { defineProps, computed } from 'vue';
 import { ElTag } from 'element-plus';
 
-const props = defineProps({
-  selectedDevice: Object,
-  selectedApp: Object,
-  adbStatus: String,
-  adbVersion: String,
-  iosStatus: String,
-  iosVersion: String
-});
+type StatusType = 'success' | 'error' | 'checking' | 'unknown';
 
-const adbStatusText = computed(() => {
-  switch (props.adbStatus) {
-    case 'success':
-      return '已安装';
-    case 'error':
-      return '未安装';
-    case 'checking':
-      return '检测中...';
-    default:
-      return '未知';
-  }
-});
-const iosStatusText = computed(() => {
-  switch (props.iosStatus) {
-    case 'success':
-      return '已安装';
-    case 'error':
-      return '未安装';
-    case 'checking':
-      return '检测中...';
-    default:
-      return '未知';
-  }
-});
+const props = defineProps<{
+  selectedDevice?: any;
+  selectedApp?: any;
+  adbStatus: StatusType;
+  adbVersion?: string;
+  iosStatus: StatusType;
+  iosVersion?: string;
+}>();
+
+// ===== 计算属性 =====
+const environmentStatusMap: Record<StatusType, string> = {
+  success: '已安装',
+  error: '未安装',
+  checking: '检测中...',
+  unknown: '未知'
+};
+
+const adbStatusText = computed(() => environmentStatusMap[props.adbStatus ?? 'unknown']);
+const iosStatusText = computed(() => environmentStatusMap[props.iosStatus ?? 'unknown']);
+
 const adbStatusType = computed(() =>
   props.adbStatus === 'success' ? 'success' : props.adbStatus === 'checking' ? 'warning' : 'danger'
 );

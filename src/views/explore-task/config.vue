@@ -388,17 +388,6 @@ function getPlatformTagConfig(platform: 'android' | 'ios') {
   };
 }
 
-// ===== 计算属性 =====
-const environmentStatusMap = {
-  success: '已安装',
-  error: '未安装',
-  checking: '检测中...',
-  unknown: '未知'
-};
-
-const adbStatusText = computed(() => environmentStatusMap[adbStatus.value]);
-const iosStatusText = computed(() => environmentStatusMap[iosStatus.value]);
-
 // 任务名称
 function generateTaskName() {
   const now = new Date();
