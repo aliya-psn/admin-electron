@@ -240,7 +240,7 @@
           @click="closeInstallDialog"
           :type="installDialog.currentStep === installDialog.totalSteps ? 'primary' : 'default'"
         >
-          {{ installDialog.currentStep === installDialog.totalSteps ? '完成' : '最小化' }}
+          {{ installDialog.currentStep === installDialog.totalSteps ? '完成' : '关闭' }}
         </el-button>
       </template>
     </el-dialog>

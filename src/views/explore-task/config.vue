@@ -53,7 +53,7 @@
                 no-data-text="无可用设备，请检查设备连接"
               >
                 <el-option v-for="item in deviceList" :key="item.id" :label="item.name" :value="item.id">
-                  <div class="device-option">
+                  <div class="device-options">
                     <div class="device-name">
                       {{ item.name }}
                       <el-tag :type="getPlatformTagConfig(item.platform).type" size="small" class="platform-tag">
@@ -171,190 +171,31 @@
       </el-card>
     </div>
 
-    <div class="side-content">
-      <div class="info-cards">
-        <!-- 环境状态卡片 -->
-        <el-card class="info-card">
-          <template #header>环境状态</template>
-          <!-- Android ADB环境 -->
-          <div class="env-status-item">
-            <span>ADB工具(Android)：</span>
-            <el-tag
-              :type="adbStatus === 'success' ? 'success' : adbStatus === 'checking' ? 'warning' : 'danger'"
-              size="small"
-            >
-              {{ adbStatusText }}
-            </el-tag>
-          </div>
-          <div v-if="adbVersion" class="env-version">ADB版本：{{ adbVersion }}</div>
-
-          <!-- iOS libimobiledevice环境 -->
-          <div class="env-status-item">
-            <span>libimobiledevice(iOS)：</span>
-            <el-tag
-              :type="iosStatus === 'success' ? 'success' : iosStatus === 'checking' ? 'warning' : 'danger'"
-              size="small"
-            >
-              {{ iosStatusText }}
-            </el-tag>
-          </div>
-          <div v-if="iosVersion" class="env-version">iOS工具版本：{{ iosVersion }}</div>
-        </el-card>
-
-        <el-card class="info-card" v-if="selectedDevice">
-          <template #header>设备信息</template>
-          <div>设备标识：{{ selectedDevice.id }}</div>
-          <div>设备名称：{{ selectedDevice.name }}</div>
-          <div>设备型号：{{ selectedDevice.model }}</div>
-          <div>
-            设备平台：
-            <el-tag :type="getPlatformTagConfig(selectedDevice.platform).type" size="small">
-              {{ getPlatformTagConfig(selectedDevice.platform).text }}
-            </el-tag>
-          </div>
-          <div>版本：{{ selectedDevice.apiLevel }}</div>
-          <div>CPU类型：{{ selectedDevice.cpu }}</div>
-        </el-card>
-
-        <el-card class="info-card" v-if="selectedApp">
-          <template #header>应用信息</template>
-          <div>应用名：{{ selectedApp.name }}</div>
-          <div>应用包名：{{ selectedApp.package }}</div>
-          <div>应用版本：{{ selectedApp.version }}</div>
-        </el-card>
-
-        <el-card class="info-card">
-          <template #header>注意事项</template>
-          <div>1. 任务执行过程中，请避免PC进入休眠状态。</div>
-          <div>2. 确保设备已连接并启用USB调试模式。</div>
-          <div>3. 首次连接设备需要在设备上确认调试授权。</div>
-        </el-card>
-      </div>
-    </div>
+    <!-- 设备和应用信息 -->
+    <DeviceAppDetail
+      :selected-device="selectedDevice"
+      :selected-app="selectedApp"
+      :adb-status="adbStatus"
+      :adb-version="adbVersion"
+      :ios-status="iosStatus"
+      :ios-version="iosVersion"
+    />
 
     <!-- 环境配置引导对话框 -->
-    <el-dialog v-model="showEnvDialog" title="配置测试环境" width="500px" :close-on-click-modal="false">
-      <div class="env-guide-content">
-        <div class="env-guide-icon">
-          <el-icon :size="60" color="#409eff">
-            <Tools />
-          </el-icon>
-        </div>
-        <h3>需要安装开发工具</h3>
-        <p>为了进行设备管理和应用测试，需要安装相应的开发工具。</p>
-
-        <div class="quick-install">
-          <h4>Android设备支持 - ADB工具：</h4>
-          <div class="install-steps">
-            <div class="step-item">
-              <span class="step-number">1</span>
-              <span class="step-text">下载Android SDK Platform Tools</span>
-            </div>
-            <div class="step-item">
-              <span class="step-number">2</span>
-              <span class="step-text">解压到合适的目录</span>
-            </div>
-            <div class="step-item">
-              <span class="step-number">3</span>
-              <span class="step-text">将目录添加到系统PATH环境变量</span>
-            </div>
-          </div>
-
-          <h4>iOS设备支持 - libimobiledevice工具：</h4>
-          <div class="install-steps">
-            <div class="step-item">
-              <span class="step-number">1</span>
-              <span class="step-text">macOS: 使用 brew install libimobiledevice</span>
-            </div>
-            <div class="step-item">
-              <span class="step-number">2</span>
-              <span class="step-text">Windows: 安装WSL后使用 sudo apt install libimobiledevice6</span>
-            </div>
-            <div class="step-item">
-              <span class="step-number">3</span>
-              <span class="step-text">确保idevice_id命令可用</span>
-            </div>
-          </div>
-
-          <div class="step-item">
-            <span class="step-number">4</span>
-            <span class="step-text">重启应用并验证安装</span>
-          </div>
-        </div>
-      </div>
-
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="showEnvDialog = false">稍后配置</el-button>
-          <el-button type="primary" @click="goToEnvironmentSetup">
-            <el-icon class="mr-1">
-              <Setting />
-            </el-icon>
-            前往环境配置
-          </el-button>
-        </div>
-      </template>
-    </el-dialog>
+    <EnvGuideDialog v-model:visible="showEnvDialog" @close="showEnvDialog = false" @goto-setup="goToEnvironmentSetup" />
 
     <!-- 应用安装进度对话框 -->
-    <el-dialog
-      v-model="installDialog.visible"
+    <InstallAppDialog
+      :visible="installDialog.visible"
       :title="installDialog.title"
-      width="600px"
-      :close-on-click-modal="false"
-      :close-on-press-escape="false"
-    >
-      <div class="install-progress">
-        <div class="progress-header">
-          <div class="progress-info">
-            <span>安装进度：{{ installDialog.currentStep }} / {{ installDialog.totalSteps }}</span>
-            <el-progress
-              :percentage="Math.round((installDialog.currentStep / installDialog.totalSteps) * 100)"
-              :status="installDialog.currentStep === installDialog.totalSteps ? 'success' : undefined"
-            />
-          </div>
-          <div class="current-command" v-if="installDialog.currentCommand">
-            <strong>当前操作：</strong>
-            <code>{{ installDialog.currentCommand }}</code>
-          </div>
-        </div>
-
-        <div class="progress-logs">
-          <h4>安装日志：</h4>
-          <div class="log-container">
-            <div v-for="(log, index) in installDialog.logs" :key="index" class="log-item" :class="`log-${log.status}`">
-              <div class="log-command">
-                <el-icon v-if="log.status === 'running'" class="loading-icon">
-                  <Loading />
-                </el-icon>
-                <el-icon v-else-if="log.status === 'success'" class="success-icon">
-                  <SuccessFilled />
-                </el-icon>
-                <el-icon v-else-if="log.status === 'error'" class="error-icon">
-                  <CloseBold />
-                </el-icon>
-                <span>{{ log.message }}</span>
-              </div>
-              <div v-if="log.output" class="log-output">
-                <pre>{{ log.output }}</pre>
-              </div>
-              <div v-if="log.error" class="log-error">
-                <pre>{{ log.error }}</pre>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <template #footer>
-        <el-button
-          @click="closeInstallDialog"
-          :type="installDialog.currentStep === installDialog.totalSteps ? 'primary' : 'default'"
-        >
-          {{ installDialog.currentStep === installDialog.totalSteps ? '完成' : '最小化' }}
-        </el-button>
-      </template>
-    </el-dialog>
+      :current-step="installDialog.currentStep"
+      :total-steps="installDialog.totalSteps"
+      :current-command="installDialog.currentCommand"
+      :logs="installDialog.logs"
+      :error-msg="installDialog.errorMsg"
+      @close="closeInstallDialog"
+      @update:visible="val => (installDialog.visible = val)"
+    />
   </div>
 </template>
 
@@ -374,9 +215,12 @@
 
 import { ref, computed, watch, onMounted, type Ref } from 'vue';
 import { ElMessage } from 'element-plus';
-import { Plus, Loading, SuccessFilled, CloseBold, Refresh, Tools, Warning, Setting } from '@element-plus/icons-vue';
+import { Plus, Loading, Refresh, Tools, Warning } from '@element-plus/icons-vue';
 import { executeCommand } from '@/service/cmd';
 import { useRouter } from 'vue-router';
+import InstallAppDialog from './InstallAppDialog.vue';
+import EnvGuideDialog from './EnvGuideDialog.vue';
+import DeviceAppDetail from './DeviceAppDetail.vue';
 const router = useRouter();
 
 // ===== 类型定义 =====
@@ -939,12 +783,21 @@ const installDialog = ref({
     status: 'running' | 'success' | 'error';
     output?: string;
     error?: string;
-  }>
+    key?: string;
+  }>,
+  errorMsg: '' // 新增：失败时的错误提示
 });
 
 // 安装 app 添加日志条目
-function installAppLog(message: string, status: LogStatus, output?: string, error?: string): void {
-  installDialog.value.logs.push({ message, status, output, error });
+function installAppLog(message: string, status: LogStatus, output?: string, error?: string, key?: string): void {
+  if (key) {
+    const idx = installDialog.value.logs.findIndex(log => log.key === key);
+    if (idx !== -1) {
+      installDialog.value.logs[idx] = { ...installDialog.value.logs[idx], message, status, output, error };
+      return;
+    }
+  }
+  installDialog.value.logs.push({ message, status, output, error, key });
 }
 
 // 安装应用主函数
@@ -1001,19 +854,20 @@ async function installApp() {
     installing.value = true;
 
     // 初始化安装对话框
-    installDialog.value = {
+    Object.assign(installDialog.value, {
       visible: true,
       title: '安装应用',
       currentStep: 0,
       totalSteps: 4,
       currentCommand: '',
-      logs: []
-    };
+      logs: [],
+      errorMsg: ''
+    });
 
     // 步骤1: 检查设备连接
     installDialog.value.currentStep = 1;
     installDialog.value.currentCommand = '检查设备连接状态...';
-    installAppLog('检查设备连接状态', 'running');
+    installAppLog('检查设备连接状态', 'running', '', '', 'check-device');
 
     const isConnected = await checkDeviceConnection(form.value.device, selectedDevice.platform);
     if (!isConnected) {
@@ -1021,46 +875,50 @@ async function installApp() {
         '设备连接检查失败',
         'error',
         '',
-        `请确保${selectedDevice.platform === 'android' ? 'Android' : 'iOS'}设备已连接并启用调试模式`
+        `请确保${selectedDevice.platform === 'android' ? 'Android' : 'iOS'}设备已连接并启用调试模式`,
+        'check-device'
       );
+      installDialog.value.errorMsg = `设备未连接或相关工具不可用，请确保${selectedDevice.platform === 'android' ? 'Android' : 'iOS'}设备已连接并启用调试模式`;
       ElMessage.error('设备未连接或相关工具不可用');
       return;
     }
-    installAppLog('设备连接正常', 'success');
+    installAppLog('设备连接正常', 'success', '', '', 'check-device');
 
     // 步骤2: 解析APK信息
     installDialog.value.currentStep = 2;
     installDialog.value.currentCommand = '解析APK信息...';
-    installAppLog('解析APK信息', 'running');
+    installAppLog('解析APK信息', 'running', '', '', 'parse-apk');
 
     const apkInfo = await parseApkInfo(apkPath);
     if (!apkInfo) {
-      installAppLog('APK信息解析失败', 'error');
+      installAppLog('APK信息解析失败', 'error', '', '', 'parse-apk');
+      installDialog.value.errorMsg = 'APK文件信息解析失败，请检查APK文件是否有效';
       ElMessage.error('APK文件信息解析失败');
       return;
     }
-    installAppLog(`解析成功: ${apkInfo.package}`, 'success');
+    installAppLog(`解析成功: ${apkInfo.package}`, 'success', '', '', 'parse-apk');
 
     // 步骤3: 安装APK
     installDialog.value.currentStep = 3;
     installDialog.value.currentCommand = `安装APK: ${apkPath}`;
-    installAppLog('开始安装APK到设备', 'running');
+    installAppLog('开始安装APK到设备', 'running', '', '', 'install-apk');
 
     const installCommand = DEVICE_COMMANDS.android.installApk(form.value.device, apkPath);
     const installResult = await executeCommand(installCommand);
 
     if (!installResult.success || (installResult.stderr && installResult.stderr.includes('FAILED'))) {
       const errorMsg = installResult.stderr || installResult.error || '安装失败';
-      installAppLog('APK安装失败', 'error', '', errorMsg);
+      installAppLog('APK安装失败', 'error', '', errorMsg, 'install-apk');
+      installDialog.value.errorMsg = '应用安装失败，请检查设备存储空间或APK兼容性';
       ElMessage.error('应用安装失败');
       return;
     }
-    installAppLog('APK安装成功', 'success', installResult.stdout);
+    installAppLog('APK安装成功', 'success', installResult.stdout, '', 'install-apk');
 
     // 步骤4: 更新应用列表
     installDialog.value.currentStep = 4;
     installDialog.value.currentCommand = '更新应用列表...';
-    installAppLog('更新应用列表', 'running');
+    installAppLog('更新应用列表', 'running', '', '', 'update-app-list');
 
     // 生成新的应用ID
     const newAppId = `app_${Date.now()}`;
@@ -1077,25 +935,29 @@ async function installApp() {
     if (existingIndex !== -1) {
       // 更新现有应用
       appList.value[existingIndex] = newApp;
-      installAppLog('应用信息已更新', 'success');
+      installAppLog('应用信息已更新', 'success', '', '', 'update-app-list');
     } else {
       // 添加新应用
       appList.value.push(newApp);
-      installAppLog('新应用已添加到列表', 'success');
+      installAppLog('新应用已添加到列表', 'success', '', '', 'update-app-list');
     }
 
     // 自动选择新安装的应用
     form.value.app = newAppId;
 
     ElMessage.success('应用安装完成！');
-    installAppLog('应用安装流程完成', 'success');
+    installAppLog('应用安装流程完成', 'success', '', '', 'install-flow');
   } catch (error) {
     console.error('安装应用时发生错误:', error);
-    installAppLog('安装过程异常', 'error', '', String(error));
+    installAppLog('安装过程异常', 'error', '', String(error), 'install-flow');
+    installDialog.value.errorMsg = '安装过程中发生未知错误，请重试或联系管理员';
     ElMessage.error('安装过程中发生错误');
   } finally {
     installing.value = false;
-    installDialog.value.currentStep = installDialog.value.totalSteps;
+    // 判断是否全部完成
+    if (installDialog.value.logs.some(log => log.key === 'install-flow' && log.status === 'success')) {
+      installDialog.value.currentStep = installDialog.value.totalSteps;
+    }
   }
 }
 
@@ -1133,7 +995,8 @@ function closeInstallDialog() {
         currentStep: 0,
         totalSteps: 0,
         currentCommand: '',
-        logs: []
+        logs: [],
+        errorMsg: ''
       };
     }, 300);
   }
@@ -1245,6 +1108,8 @@ watch(
   () => form.value.device,
   async deviceId => {
     appList.value = [];
+    form.value.app = '';
+
     if (!deviceId) return;
     const device = deviceList.value.find(d => d.id === deviceId);
     console.info('获取到设备信息:', device);
@@ -1291,71 +1156,6 @@ watch(
 
   .tip-icon {
     margin-right: 4px;
-  }
-}
-
-.side-content {
-  .info-cards {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-
-    .info-card {
-      :deep(.el-card__header) {
-        padding: 12px;
-        background-color: #f8f9fa;
-        border-bottom: 1px solid #e4e7ed;
-        font-weight: 600;
-        color: #303133;
-      }
-
-      :deep(.el-card__body) {
-        padding: 16px;
-
-        > div {
-          margin-bottom: 8px;
-          color: #606266;
-          font-size: 14px;
-
-          &:last-child {
-            margin-bottom: 0;
-          }
-        }
-      }
-
-      // 环境状态样式
-      .env-status-item {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 8px;
-      }
-
-      .env-version {
-        font-size: 13px !important;
-        color: #e6a23c !important;
-      }
-    }
-  }
-}
-
-// 环境引导对话框样式
-.env-guide-content {
-  text-align: center;
-
-  .env-guide-icon {
-    margin-bottom: 16px;
-  }
-
-  h3 {
-    margin: 0 0 12px 0;
-    color: #303133;
-  }
-
-  p {
-    color: #606266;
-    line-height: 1.5;
-    margin-bottom: 20px;
   }
 }
 
@@ -1457,7 +1257,7 @@ watch(
 }
 
 // 设备选项样式
-.device-option {
+.device-options {
   .device-name {
     font-weight: 500;
     color: #303133;
@@ -1503,126 +1303,6 @@ watch(
 
     :deep(.el-icon) {
       margin-right: 6px;
-    }
-  }
-}
-
-// 安装进度对话框样式
-.install-progress {
-  .progress-header {
-    margin-bottom: 20px;
-
-    .progress-info {
-      margin-bottom: 10px;
-
-      span {
-        display: block;
-        margin-bottom: 8px;
-        color: #606266;
-        font-size: 14px;
-      }
-    }
-
-    .current-command {
-      padding: 8px 12px;
-      background-color: #f5f7fa;
-      border-radius: 4px;
-      border-left: 3px solid #409eff;
-
-      code {
-        font-family: 'Courier New', monospace;
-        color: #409eff;
-        font-size: 13px;
-      }
-    }
-  }
-
-  // 安装日志
-  .progress-logs {
-    h4 {
-      margin: 0 0 12px 0;
-      color: #303133;
-      font-size: 16px;
-    }
-
-    .log-container {
-      max-height: 300px;
-      overflow-y: auto;
-      border: 1px solid #e4e7ed;
-      border-radius: 4px;
-      background-color: #fafafa;
-
-      .log-item {
-        padding: 8px 12px;
-        border-bottom: 1px solid #f0f0f0;
-
-        &:last-child {
-          border-bottom: none;
-        }
-
-        .log-command {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-size: 14px;
-
-          .loading-icon {
-            color: #409eff;
-            animation: rotate 1s linear infinite;
-          }
-
-          .success-icon {
-            color: #67c23a;
-          }
-
-          .error-icon {
-            color: #f56c6c;
-          }
-        }
-
-        .log-output,
-        .log-error {
-          margin-top: 8px;
-          padding: 8px;
-          border-radius: 4px;
-          font-size: 12px;
-
-          pre {
-            margin: 0;
-            white-space: pre-wrap;
-            word-break: break-all;
-          }
-        }
-
-        .log-output {
-          background-color: #f0f9ff;
-          border: 1px solid #e1f5fe;
-        }
-
-        .log-error {
-          background-color: #fef2f2;
-          border: 1px solid #fecaca;
-          color: #dc2626;
-        }
-
-        &.log-running {
-          .log-command {
-            color: #409eff;
-          }
-        }
-
-        &.log-success {
-          .log-command {
-            color: #67c23a;
-          }
-        }
-
-        &.log-error {
-          .log-command {
-            color: #f56c6c;
-          }
-        }
-      }
     }
   }
 }
