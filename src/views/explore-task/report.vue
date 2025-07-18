@@ -6,6 +6,12 @@
       <el-step title="查看报告" />
     </el-steps>
 
+    <!-- 加载状态 -->
+    <div v-if="loading" class="loading-overlay">
+      <el-loading-spinner />
+      <p>正在加载报告数据...</p>
+    </div>
+
     <div class="report-content">
       <!-- 任务信息 -->
       <el-card class="task-card">
@@ -14,8 +20,8 @@
             <div class="task-title">
               <el-icon><Document /></el-icon>
               <div>
-                <div class="name">Task-0731-081941</div>
-                <div class="type">应用探索测试</div>
+                <div class="name">{{ taskInfo.name }}</div>
+                <div class="type">{{ taskInfo.type }}</div>
               </div>
             </div>
             <div class="task-actions">
@@ -31,19 +37,19 @@
           <div class="task-details">
             <div class="detail-group">
               <div class="label">应用信息</div>
-              <div class="value">com.huawei.testmall v1.0.0</div>
+              <div class="value">{{ taskInfo.appInfo }}</div>
             </div>
             <div class="detail-group">
               <div class="label">开始时间</div>
-              <div class="value">2024-07-31 08:20:07</div>
+              <div class="value">{{ taskInfo.startTime }}</div>
             </div>
             <div class="detail-group">
               <div class="label">结束时间</div>
-              <div class="value">2024-07-31 08:50:34</div>
+              <div class="value">{{ taskInfo.endTime }}</div>
             </div>
             <div class="detail-group">
               <div class="label">执行方式</div>
-              <div class="value">DevEco Testing</div>
+              <div class="value">{{ taskInfo.executionMethod }}</div>
             </div>
           </div>
         </div>
@@ -54,38 +60,54 @@
         <template #header>
           <div class="card-header">
             <span>数据概览</span>
-            <el-icon><DataAnalysis /></el-icon>
+            <div class="header-actions">
+              <el-icon><DataAnalysis /></el-icon>
+              <el-button size="small" @click="updateOverviewStats">刷新数据</el-button>
+            </div>
           </div>
         </template>
         <div class="overview-content">
           <div class="stats-grid">
             <div class="stat-item">
-              <div class="value">0.5</div>
+              <div class="value">{{ overviewStats.totalDuration }}</div>
               <div class="label">总时长(小时)</div>
             </div>
             <div class="stat-item">
-              <div class="value">5</div>
+              <div class="value">{{ overviewStats.caseTypeCount }}</div>
               <div class="label">用例类型数</div>
             </div>
             <div class="stat-item">
-              <div class="value">128</div>
+              <div class="value">{{ overviewStats.actionCount }}</div>
               <div class="label">操作动作数</div>
             </div>
             <div class="stat-item">
-              <div class="value">21</div>
+              <div class="value">{{ overviewStats.coverageCount }}</div>
               <div class="label">遍历覆盖</div>
             </div>
             <div class="stat-item">
-              <div class="value">8</div>
+              <div class="value">{{ overviewStats.issueCount }}</div>
               <div class="label">发现故障</div>
             </div>
           </div>
           <div class="model-path">
             <div class="path-info">
               <span class="path-label">模型包路径：</span>
-              <span class="path-value">D:\ProgramData\DevEco Testing\...\041_graph.zip</span>
+              <span class="path-value" @click="copyPath" title="点击复制路径 (Ctrl+C)">{{ modelPackagePath }}</span>
             </div>
-            <el-button size="small" @click="openPath">打开路径</el-button>
+                          <div class="path-actions">
+                <el-button size="small" type="info" :disabled="!modelPackagePath" @click="openTestPath">
+                  <el-icon class="mr-1"><Open /></el-icon>
+                  
+                  打开路径</el-button>
+                <el-button 
+                  size="small" 
+                  type="primary" 
+                  @click="copyPath"
+                >
+                  <el-icon class="mr-1"><CopyDocument /></el-icon>
+                  复制路径
+                </el-button>
+              </div>
           </div>
         </div>
       </el-card>
@@ -125,11 +147,11 @@
               </div>
               <div class="detail-row">
                 <span class="label">路径</span>
-                <span class="value">pages/Index</span>
+                <span class="value">{{ selectedNode.path || 'pages/Index' }}</span>
               </div>
               <div class="detail-row">
                 <span class="label">次数</span>
-                <span class="value">{{ selectedNode.visitCount || 13 }}</span>
+                <span class="value">{{ selectedNode.visitCount || 0 }}</span>
               </div>
             </div>
             <div class="detail-image" v-if="selectedNode.image">
@@ -180,14 +202,14 @@
     <!-- 任务详情对话框 -->
     <el-dialog v-model="showTaskDetail" title="任务详情" width="60%">
       <el-descriptions :column="2" border>
-        <el-descriptions-item label="任务名称">Task-0731-081941</el-descriptions-item>
-        <el-descriptions-item label="设备信息">22M0****133g(HUAWEI Mate X5)</el-descriptions-item>
-        <el-descriptions-item label="应用包名">com.huawei.testmall</el-descriptions-item>
-        <el-descriptions-item label="应用版本">1.0.0</el-descriptions-item>
-        <el-descriptions-item label="测试时长">0.5小时</el-descriptions-item>
-        <el-descriptions-item label="截屏间隔">2秒</el-descriptions-item>
-        <el-descriptions-item label="模型选择">无模型</el-descriptions-item>
-        <el-descriptions-item label="归档包名">testmall_1.0.0_Task-graph.zip</el-descriptions-item>
+        <el-descriptions-item label="任务名称">{{ taskInfo.name }}</el-descriptions-item>
+        <el-descriptions-item label="设备信息">{{ taskInfo.deviceInfo }}</el-descriptions-item>
+        <el-descriptions-item label="应用包名">{{ taskInfo.appPackage }}</el-descriptions-item>
+        <el-descriptions-item label="应用版本">{{ taskInfo.appVersion }}</el-descriptions-item>
+        <el-descriptions-item label="测试时长">{{ taskInfo.testDuration }}</el-descriptions-item>
+        <el-descriptions-item label="截屏间隔">{{ taskInfo.screenshotInterval }}</el-descriptions-item>
+        <el-descriptions-item label="模型选择">{{ taskInfo.modelSelection }}</el-descriptions-item>
+        <el-descriptions-item label="归档包名">{{ taskInfo.archivePackage }}</el-descriptions-item>
       </el-descriptions>
       <template #footer>
         <el-button @click="showTaskDetail = false">关闭</el-button>
@@ -224,11 +246,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import { Document, Download, DataAnalysis, Close } from '@element-plus/icons-vue';
+import { Document, Download, DataAnalysis, Close, CopyDocument, Open } from '@element-plus/icons-vue';
 import PathMap from '@/components/PathMap/PathMap.vue';
+import { copyTextToClipboard } from '@/utils';
 
 const router = useRouter();
 
@@ -236,6 +259,39 @@ const router = useRouter();
 const showTaskDetail = ref(false);
 const showExecuteLog = ref(false);
 const showIssueSummaryDialog = ref(false);
+
+// 加载状态
+const loading = ref(false);
+
+// 任务基本信息
+const taskInfo = ref({
+  id: 'Task-0731-081941',
+  name: 'Task-0731-081941',
+  type: '应用探索测试',
+  appInfo: 'com.huawei.testmall v1.0.0',
+  startTime: '2024-07-31 08:20:07',
+  endTime: '2024-07-31 08:50:34',
+  executionMethod: 'DevEco Testing',
+  deviceInfo: '22M0****133g(HUAWEI Mate X5)',
+  appPackage: 'com.huawei.testmall',
+  appVersion: '1.0.0',
+  testDuration: '0.5小时',
+  screenshotInterval: '2秒',
+  modelSelection: '无模型',
+  archivePackage: 'testmall_1.0.0_Task-graph.zip'
+});
+
+// 数据概览统计
+const overviewStats = ref({
+  totalDuration: 0.5,
+  caseTypeCount: 5,
+  actionCount: 128,
+  coverageCount: 21,
+  issueCount: 8
+});
+
+// 模型包路径
+const modelPackagePath = ref('D:\\apache-maven-3.8.4\\commons-codec\\041_graph.zip');
 
 // 执行日志内容
 const logContent = ref(`2024-07-31 08:20:07 Info 开始执行测试任务
@@ -255,16 +311,17 @@ type NodeType = {
   image?: string;
   type?: string;
   visitCount?: number;
+  path?: string;
 };
 
 const nodes = ref<NodeType[]>([
-  { id: 1, label: '入口A', image: '/images/file_1.png', type: '入口' },
-  { id: 2, label: '页面2', image: '/images/file_2.png', type: '页面' },
-  { id: 3, label: '页面3', image: '/images/file_3.png', type: '页面' },
-  { id: 4, label: '出口A', image: '/images/file_4.png', type: '出口' },
-  { id: 5, label: '入口B', image: '/images/file_5.png', type: '入口' },
-  { id: 6, label: '页面6', image: '/images/file_6.png', type: '页面' },
-  { id: 7, label: '出口B', image: '/images/file_7.png', type: '出口' }
+  { id: 1, label: '入口A', image: '/images/file_1.png', type: '入口', path: 'pages/EntryA', visitCount: 15 },
+  { id: 2, label: '页面2', image: '/images/file_2.png', type: '页面', path: 'pages/Page2', visitCount: 23 },
+  { id: 3, label: '页面3', image: '/images/file_3.png', type: '页面', path: 'pages/Page3', visitCount: 18 },
+  { id: 4, label: '出口A', image: '/images/file_4.png', type: '出口', path: 'pages/ExitA', visitCount: 8 },
+  { id: 5, label: '入口B', image: '/images/file_5.png', type: '入口', path: 'pages/EntryB', visitCount: 12 },
+  { id: 6, label: '页面6', image: '/images/file_6.png', type: '页面', path: 'pages/Page6', visitCount: 31 },
+  { id: 7, label: '出口B', image: '/images/file_7.png', type: '出口', path: 'pages/ExitB', visitCount: 9 }
 ]);
 
 const edges = ref([
@@ -414,16 +471,179 @@ function markResolved(row: any) {
   ElMessage.success(`问题 ${row.no} 已标记为已解决`);
 }
 
+// 模拟数据更新方法
 function refreshIssues() {
+  // 模拟刷新问题列表
+  const newIssues = issueList.value.map(issue => ({
+    ...issue,
+    count: Math.floor(Math.random() * 10) + 1
+  }));
+  issueList.value = newIssues;
   ElMessage.success('问题列表已刷新');
 }
+
+// 模拟更新统计数据
+function updateOverviewStats() {
+  overviewStats.value = {
+    totalDuration: Math.round((Math.random() * 2 + 0.1) * 10) / 10,
+    caseTypeCount: Math.floor(Math.random() * 10) + 1,
+    actionCount: Math.floor(Math.random() * 200) + 50,
+    coverageCount: Math.floor(Math.random() * 50) + 10,
+    issueCount: Math.floor(Math.random() * 15) + 1
+  };
+}
+
+// 模拟更新任务信息
+function updateTaskInfo() {
+  const now = new Date();
+  const startTime = new Date(now.getTime() - Math.random() * 3600000); // 随机开始时间
+  
+  taskInfo.value = {
+    ...taskInfo.value,
+    startTime: startTime.toLocaleString('zh-CN'),
+    endTime: now.toLocaleString('zh-CN'),
+    testDuration: `${Math.round((now.getTime() - startTime.getTime()) / 3600000 * 10) / 10}小时`
+  };
+}
+
+// 模拟加载任务数据
+function loadTaskData() {
+  loading.value = true;
+  // 这里可以调用API获取真实数据
+  // 目前使用模拟数据
+  console.log('加载任务数据...');
+  
+  // 模拟异步加载
+  setTimeout(() => {
+    updateTaskInfo();
+    updateOverviewStats();
+    loading.value = false;
+    ElMessage.success('数据加载完成');
+  }, 1000);
+}
+
+// 组件挂载时加载数据
+onMounted(() => {
+  loadTaskData();
+  
+  // 添加键盘快捷键监听
+  const handleKeyDown = (event: KeyboardEvent) => {
+    // Ctrl+C 复制路径
+    if (event.ctrlKey && event.key === 'c') {
+      event.preventDefault();
+      copyPath();
+    }
+  };
+  
+  document.addEventListener('keydown', handleKeyDown);
+  
+  // 组件卸载时移除监听器
+  return () => {
+    document.removeEventListener('keydown', handleKeyDown);
+  };
+});
 
 function exportReport() {
   ElMessage.success('报告导出中...');
 }
 
-function openPath() {
-  ElMessage.info('正在打开模型包存放路径...');
+/** 打开路径 开始 */
+// 验证路径格式
+function validatePath(path: string): boolean {
+  if (!path) return false;
+  
+  // 检查Windows路径格式
+  const windowsPathRegex = /^[A-Za-z]:\\(?:[^<>:"/\\|?*]+\\)*[^<>:"/\\|?*]*$/;
+  return windowsPathRegex.test(path);
+}
+
+// 获取父目录路径
+function getParentDirectory(path: string): string | null {
+  if (!path) return null;
+  
+  const lastSeparatorIndex = path.lastIndexOf('\\');
+  if (lastSeparatorIndex === -1) return null;
+  
+  return path.substring(0, lastSeparatorIndex);
+}
+
+// 测试路径是否存在
+async function openTestPath() {
+  try {
+    
+    if (!validatePath(modelPackagePath.value)) {
+      ElMessage.error('模型包路径格式无效');
+      return;
+    }
+    
+    if (typeof window !== 'undefined' && window.fileAPI) {
+      const existsResult = await window.fileAPI.exists(modelPackagePath.value);
+      if (existsResult.success && existsResult.exists) {
+        ElMessage.success('模型包文件存在');
+        window.externalAPI.openPath(modelPackagePath.value);
+        
+      } else {
+        ElMessage.error('模型包文件不存在');
+        
+        // 检查父目录是否存在
+        const parentDir = getParentDirectory(modelPackagePath.value);
+        if (parentDir) {
+          const parentExistsResult = await window.fileAPI.exists(parentDir);
+          if (parentExistsResult.success && parentExistsResult.exists) {
+            openParentDirectory(parentDir);
+          }
+        }
+      }
+    } else {
+      ElMessage.info('当前环境不支持文件检查');
+    }
+  } catch (error) {
+    ElMessage.error(`测试路径时发生错误: ${error}`);
+  }
+}
+
+// 打开父目录的辅助函数
+async function openParentDirectory(parentDir: string) {
+  try {
+    // 验证父目录路径格式
+    if (!validatePath(parentDir)) {
+      ElMessage.error('父目录路径格式无效');
+      return;
+    }
+    const parentResult = await window.externalAPI.openPath(parentDir);
+    if (parentResult.success) {
+      ElMessage.info('已打开模型包所在目录');
+    } else {
+      ElMessage.error(`打开目录失败: ${parentResult.error}`);
+    }
+  } catch (error) {
+    ElMessage.error(`打开父目录时发生错误: ${error}`);
+  }
+}
+/** 打开路径 结束 */
+
+// 复制路径到剪贴板
+async function copyPath() {
+  try {
+    if (!modelPackagePath.value) {
+      ElMessage.error('模型包路径不存在');
+      return;
+    }
+    
+    if (typeof window !== 'undefined' && window.clipboardAPI) {
+      const result = await window.clipboardAPI.writeText(modelPackagePath.value);
+      if (result.success) {
+        ElMessage.success('路径已复制到剪贴板');
+      } else {
+        ElMessage.error(`复制失败: ${result.error}`);
+      }
+    } else {
+      // 如果不在 Electron 环境中，使用浏览器 API
+      copyTextToClipboard(modelPackagePath.value);
+    }
+  } catch (error) {
+    ElMessage.error(`复制路径时发生错误: ${error}`);
+  }
 }
 
 function downloadLog() {
@@ -439,9 +659,31 @@ function goBack() {
 .explore-report {
   padding: 16px;
   min-height: 100vh;
+  position: relative;
 
   :deep(.el-steps) {
     margin-bottom: 20px;
+  }
+
+  .loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    border-radius: 8px;
+
+    p {
+      margin-top: 16px;
+      color: #606266;
+      font-size: 14px;
+    }
   }
 }
 
@@ -470,6 +712,12 @@ function goBack() {
 
       > span {
         margin-left: 6px;
+      }
+
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
       }
 
       .map-stats {
@@ -606,25 +854,48 @@ function goBack() {
 
 .model-path {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 10px;
-  padding: 0 12px;
+  padding: 12px;
   background: #f8f9fa;
-  border-radius: 4px;
+  border-radius: 6px;
+  border: 1px solid #e4e7ed;
 
   .path-info {
     flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 
     .path-label {
       font-weight: 600;
       color: #303133;
-      margin-right: 6px;
+      white-space: nowrap;
     }
 
     .path-value {
+      color: #409eff;
+      font-family: 'Courier New', monospace;
       font-size: 13px;
-      color: #606266;
+      word-break: break-all;
+      cursor: pointer;
+      text-decoration: underline;
+      transition: color 0.3s ease;
+      
+      &:hover {
+        color: #66b1ff;
+      }
+      
+      &:active {
+        color: #3a8ee6;
+      }
     }
+  }
+
+  .path-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
   }
 }
 
@@ -818,7 +1089,12 @@ function goBack() {
   .model-path {
     flex-direction: column;
     align-items: flex-start;
-    gap: 6px;
+    gap: 12px;
+
+    .path-actions {
+      width: 100%;
+      justify-content: flex-start;
+    }
   }
 
   .map-container {
