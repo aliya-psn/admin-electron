@@ -61,7 +61,7 @@
           </el-select>
         </div>
         <div class="log-list">
-          <div v-for="log in logs" :key="log.time">{{ log.time }} {{ log.level }} {{ log.msg }}</div>
+          <div v-for="log in logs" :key="log">{{ log }}</div>
         </div>
       </div>
     </div>
