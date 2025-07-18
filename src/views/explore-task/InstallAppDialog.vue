@@ -37,6 +37,7 @@
               <el-icon v-else-if="log.status === 'error'" class="error-icon">
                 <CloseBold />
               </el-icon>
+              <!-- 成功/失败 -->
               <span>{{ log.message }}</span>
             </div>
             <div v-if="log.output" class="log-output">
