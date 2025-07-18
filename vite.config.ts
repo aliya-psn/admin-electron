@@ -36,7 +36,7 @@ export default defineConfig(({ command, mode }) => {
       proxy: {
         // 开发
         '/dev': {
-          target: 'http://192.168.129.95:8080',
+          target: 'http://192.168.129.95:8081',
           ws: true,
           changeOrigin: true,
           rewrite: path => path.replace(/^\/dev/, '')

@@ -1,17 +1,30 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { app } from 'electron';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // 日志文件目录
-const logDir = path.resolve(__dirname, '../logs');
-const LOG_RETAIN_DAYS = 7;
+// const logDir = path.resolve(__dirname, '../logs'); // 开发环境可以，打包后不行：不能在app.asar包内创建目录
 
-// 确保 logs 目录存在
+let logDir;
+if (app.isPackaged) {
+  // 打包环境，写到 resources/logs
+  logDir = path.join(process.resourcesPath, 'logs');
+} else {
+  // 开发环境，写到 userData
+  logDir = path.join(app.getPath('userData'), 'logs');
+}
+
+const LOG_RETAIN_DAYS = 7;
 if (!fs.existsSync(logDir)) {
-  fs.mkdirSync(logDir, { recursive: true });
+  try {
+    fs.mkdirSync(logDir, { recursive: true });
+  } catch (e) {
+    console.error('日志目录创建失败:', e);
+  }
 }
 
 function getLogFilePath(level) {
