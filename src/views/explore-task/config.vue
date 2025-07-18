@@ -883,10 +883,10 @@ async function installApp() {
       installAppLog('APK信息解析失败', 'error', '', '', 'parse-apk');
       // 根据平台显示不同的 aapt 配置提示
       const isWindows = navigator.platform.toLowerCase().includes('win');
-      const commonMsg = `APK文件信息解析失败，可能原因如下：\n\n1. 未安装 Android SDK 或未安装 build-tools\n2. aapt 工具未加入 PATH，或未找到\n3. APK 文件本身无效\n\n【解决方法】\n- 请确认已安装 Android SDK，并在 build-tools 目录下存在 aapt（Windows 下为 aapt.exe）\n`;
+      const commonMsg = `APK文件信息解析失败，可能原因如下：\n1. 未安装 Android SDK 或未安装 build-tools\n2. aapt 工具未加入 PATH，或未找到\n3. APK 文件本身无效\n【解决方法】\n- 请确认已安装 Android SDK，并在 build-tools 目录下存在 aapt\n`;
       const platformMsg = isWindows
-        ? `- Windows：请将 aapt.exe 所在目录（如 C:\\Users\\你的用户名\\AppData\\Local\\Android\\Sdk\\build-tools\\*.*.*）加入系统 PATH 环境变量\n- 在命令提示符执行 aapt version 检查是否可用`
-        : `- macOS/Linux：可执行如下命令建立软连接（需管理员权限）：\n  sudo ln -s /Users/xxx/Library/Android/sdk/build-tools/36.0.0/aapt /usr/local/bin/aapt\n- 或将 aapt 所在目录加入 PATH\n- 在终端执行 aapt version 检查是否可用`;
+        ? `- Windows：请将 aapt.exe 所在目录加入系统 PATH 环境变量\n`
+        : `- macOS/Linux：建立软连接： sudo ln -s \${ANDROID_SDK_HOME}/build-tools/x.x.x/aapt /usr/local/bin/aapt\n- 或将 aapt 所在目录加入 PATH`;
       installDialog.value.errorMsg = `${commonMsg}${platformMsg}`;
       ElMessage.error('APK文件信息解析失败，请检查 aapt 环境或 APK 文件有效性');
       return;

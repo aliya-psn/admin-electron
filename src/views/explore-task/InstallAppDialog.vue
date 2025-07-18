@@ -8,7 +8,11 @@
   >
     <div class="install-progress">
       <div v-if="errorMsg" class="install-error-msg">
-        <el-alert :title="errorMsg" type="error" show-icon :closable="false" />
+        <el-alert type="error" show-icon :closable="false">
+          <template #title>
+            <div class="error-message-content" v-html="formatErrorMessage(errorMsg)"></div>
+          </template>
+        </el-alert>
       </div>
       <div class="progress-header">
         <div class="progress-info">
@@ -72,7 +76,7 @@ interface InstallLog {
 
 const visible = defineModel<boolean>('visible');
 
-defineProps({
+const props = defineProps({
   title: String,
   currentStep: {
     type: Number,
@@ -89,13 +93,25 @@ defineProps({
   },
   errorMsg: String
 });
+
 defineEmits(['close', 'update:visible']);
+
+// 格式化错误信息，将 \n 转换为 <br> 标签
+const formatErrorMessage = (message: string) => {
+  if (!message) return '';
+  return message.replace(/\n/g, '<br>');
+};
 </script>
 
 <style scoped lang="scss">
 .install-progress {
   .install-error-msg {
     margin-bottom: 16px;
+    .error-message-content {
+      white-space: pre-line;
+      line-height: 1.5;
+      font-size: 13px;
+    }
   }
   .progress-header {
     margin-bottom: 20px;
