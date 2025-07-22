@@ -131,22 +131,6 @@ export const dynamicRoutes: RouteRecordRaw[] = [
     ]
   },
   {
-    path: '/file-operations',
-    component: Layouts,
-    children: [
-      {
-        name: 'file-operations',
-        path: 'index',
-        component: () => import('@/views/file-operations/index.vue'),
-        meta: {
-          title: '文件操作',
-          svgIcon: 'link',
-          keepAlive: true
-        }
-      }
-    ]
-  },
-  {
     path: '/system-features',
     component: Layouts,
     children: [

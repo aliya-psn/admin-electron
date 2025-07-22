@@ -165,14 +165,6 @@
         <div class="dialog-section">
           <el-row :gutter="20">
             <el-col :xs="24" :sm="24" :md="8" :lg="8" :xl="8">
-              <h4>文件操作</h4>
-              <div class="button-group">
-                <el-button type="primary" @click="openFileDialog">打开文件</el-button>
-                <el-button type="success" @click="saveFileDialog">保存文件</el-button>
-                <el-button type="warning" @click="openDirectoryDialog">打开目录</el-button>
-              </div>
-            </el-col>
-            <el-col :xs="24" :sm="24" :md="8" :lg="8" :xl="8">
               <h4>消息框</h4>
               <div class="button-group">
                 <el-button type="info" @click="showInfoMessage">信息提示</el-button>
@@ -303,6 +295,81 @@
         </div>
       </el-card>
 
+      <!-- 文件操作 -->
+      <el-card class="feature-card" shadow="hover">
+        <template #header>
+          <div class="card-header">
+            <el-icon><Document /> </el-icon>
+            <span>文件操作</span>
+          </div>
+        </template>
+        <div class="operation-section">
+          <h4>浏览器文件读取</h4>
+          <el-button type="primary" @click="browserReadFile">选择并读取文件</el-button>
+          <div v-if="browserFileContent" class="file-content">
+            <h5>文件内容：</h5>
+            <el-input
+              v-model="browserFileContent"
+              type="textarea"
+              :rows="6"
+              readonly
+              placeholder="文件内容将显示在这里"
+            />
+          </div>
+        </div>
+        <div class="operation-section">
+          <h4>浏览器文件下载</h4>
+          <el-button type="success" @click="browserDownloadFile">下载示例文件</el-button>
+        </div>
+        <div class="operation-section">
+          <h4>Electron 文件读取</h4>
+          <el-input
+            v-model="electronFilePath"
+            placeholder="请输入文件路径（如：/path/to/file.txt）"
+            class="path-input"
+          />
+          <el-button type="primary" @click="electronReadFile" :loading="electronLoading">读取文件</el-button>
+          <div v-if="electronFileContent" class="file-content">
+            <h5>文件内容：</h5>
+            <el-input
+              v-model="electronFileContent"
+              type="textarea"
+              :rows="6"
+              readonly
+              placeholder="文件内容将显示在这里"
+            />
+          </div>
+        </div>
+        <div class="operation-section">
+          <h4>Electron 文件写入</h4>
+          <el-input v-model="electronWritePath" placeholder="请输入写入文件路径" class="path-input" />
+          <el-input
+            v-model="electronWriteContent"
+            type="textarea"
+            :rows="4"
+            placeholder="请输入要写入的内容"
+            class="content-input"
+          />
+          <el-button type="success" @click="electronWriteFile" :loading="electronLoading">写入文件</el-button>
+        </div>
+        <div class="operation-section">
+          <h4>目录操作</h4>
+          <el-input v-model="electronDirPath" placeholder="请输入目录路径" class="path-input" />
+          <el-button type="warning" @click="electronReadDir" :loading="electronLoading">读取目录</el-button>
+          <el-button type="info" @click="electronCreateDir" :loading="electronLoading">创建目录</el-button>
+          <div v-if="electronDirContent.length > 0" class="file-content">
+            <h5>目录内容：</h5>
+            <el-tag
+              v-for="item in electronDirContent"
+              :key="item"
+              class="dir-item"
+              :type="item.includes('.') ? 'success' : 'warning'"
+              >{{ item }}</el-tag
+            >
+          </div>
+        </div>
+      </el-card>
+
       <!-- 操作日志 -->
       <el-card class="log-card" shadow="hover">
         <template #header>
@@ -326,7 +393,16 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { ElMessage } from 'element-plus';
-import { Monitor, DocumentCopy, FolderOpened, Bell, Link, FullScreen, InfoFilled } from '@element-plus/icons-vue';
+import {
+  Monitor,
+  DocumentCopy,
+  FolderOpened,
+  Bell,
+  Link,
+  FullScreen,
+  InfoFilled,
+  Document
+} from '@element-plus/icons-vue';
 import { executeCommand } from '@/service/cmd';
 import { mysqlQuery } from '@/service/mysql';
 
@@ -372,6 +448,16 @@ const dbSql = ref('SELECT * FROM user');
 const dbResult = ref<any[]>([]);
 const dbColumns = ref<string[]>([]);
 const dbResultMsg = ref('');
+
+// 文件操作相关
+const browserFileContent = ref('');
+const electronFilePath = ref('');
+const electronFileContent = ref('');
+const electronWritePath = ref('');
+const electronWriteContent = ref('');
+const electronDirPath = ref('');
+const electronDirContent = ref<string[]>([]);
+const electronLoading = ref(false);
 
 // 添加日志
 const addLog = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
@@ -508,54 +594,6 @@ const clearClipboard = async () => {
 };
 
 // 对话框操作
-const openFileDialog = async () => {
-  try {
-    if (typeof window !== 'undefined' && window.dialogAPI) {
-      const result = await window.dialogAPI.openFile();
-      if (result.success && result.data?.length) {
-        addLog(`打开文件成功: ${result.data[0]}`, 'success');
-        ElMessage.success(`已选择文件: ${result.data[0]}`);
-      } else {
-        addLog('文件选择已取消', 'info');
-      }
-    }
-  } catch (error) {
-    addLog(`文件对话框异常: ${error}`, 'error');
-  }
-};
-
-const saveFileDialog = async () => {
-  try {
-    if (typeof window !== 'undefined' && window.dialogAPI) {
-      const result = await window.dialogAPI.saveFile();
-      if (result.success && result.data) {
-        addLog(`保存文件成功: ${result.data}`, 'success');
-        ElMessage.success(`文件将保存到: ${result.data}`);
-      } else {
-        addLog('文件保存已取消', 'info');
-      }
-    }
-  } catch (error) {
-    addLog(`文件对话框异常: ${error}`, 'error');
-  }
-};
-
-const openDirectoryDialog = async () => {
-  try {
-    if (typeof window !== 'undefined' && window.dialogAPI) {
-      const result = await window.dialogAPI.openDirectory();
-      if (result.success && result.data?.length) {
-        addLog(`打开目录成功: ${result.data[0]}`, 'success');
-        ElMessage.success(`已选择目录: ${result.data[0]}`);
-      } else {
-        addLog('目录选择已取消', 'info');
-      }
-    }
-  } catch (error) {
-    addLog(`目录对话框异常: ${error}`, 'error');
-  }
-};
-
 const showInfoMessage = async () => {
   try {
     if (typeof window !== 'undefined' && window.dialogAPI) {
@@ -921,6 +959,155 @@ const clearDbResult = () => {
   dbResult.value = [];
   dbColumns.value = [];
   dbResultMsg.value = '';
+};
+
+// 文件操作相关
+const browserReadFile = () => {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.txt,.json,.js,.ts,.vue,.html,.css,.md';
+  input.onchange = e => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = event => {
+        browserFileContent.value = event.target?.result as string;
+        addLog(`浏览器读取文件成功: ${file.name}`, 'success');
+        ElMessage.success(`文件读取成功: ${file.name}`);
+      };
+      reader.onerror = () => {
+        addLog(`浏览器读取文件失败: ${file.name}`, 'error');
+        ElMessage.error('文件读取失败');
+      };
+      reader.readAsText(file);
+    }
+  };
+  input.click();
+};
+const browserDownloadFile = () => {
+  const content = '这是一个通过浏览器下载的示例文件\n创建时间: ' + new Date().toLocaleString();
+  const blob = new Blob([content], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'browser-example.txt';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  addLog('浏览器下载文件成功', 'success');
+  ElMessage.success('文件下载成功');
+};
+const electronReadFile = async () => {
+  if (!electronFilePath.value) {
+    ElMessage.warning('请输入文件路径');
+    return;
+  }
+  electronLoading.value = true;
+  try {
+    if (typeof window !== 'undefined' && window.fileAPI) {
+      const result = await window.fileAPI.read(electronFilePath.value);
+      if (result.success) {
+        electronFileContent.value = result.data || '';
+        addLog(`Electron 读取文件成功: ${electronFilePath.value}`, 'success');
+        ElMessage.success('文件读取成功');
+      } else {
+        addLog(`Electron 读取文件失败: ${result.error}`, 'error');
+        ElMessage.error(`读取失败: ${result.error}`);
+      }
+    } else {
+      addLog('当前不在 Electron 环境中，无法使用文件 API', 'error');
+      ElMessage.error('当前不在 Electron 环境中');
+    }
+  } catch (error) {
+    addLog(`Electron 读取文件异常: ${error}`, 'error');
+    ElMessage.error('读取文件时发生异常');
+  } finally {
+    electronLoading.value = false;
+  }
+};
+const electronWriteFile = async () => {
+  if (!electronWritePath.value || !electronWriteContent.value) {
+    ElMessage.warning('请输入文件路径和内容');
+    return;
+  }
+  electronLoading.value = true;
+  try {
+    if (typeof window !== 'undefined' && window.fileAPI) {
+      const result = await window.fileAPI.write(electronWritePath.value, electronWriteContent.value);
+      if (result.success) {
+        addLog(`Electron 写入文件成功: ${electronWritePath.value}`, 'success');
+        ElMessage.success('文件写入成功');
+        electronWriteContent.value = '';
+      } else {
+        addLog(`Electron 写入文件失败: ${result.error}`, 'error');
+        ElMessage.error(`写入失败: ${result.error}`);
+      }
+    } else {
+      addLog('当前不在 Electron 环境中，无法使用文件 API', 'error');
+      ElMessage.error('当前不在 Electron 环境中');
+    }
+  } catch (error) {
+    addLog(`Electron 写入文件异常: ${error}`, 'error');
+    ElMessage.error('写入文件时发生异常');
+  } finally {
+    electronLoading.value = false;
+  }
+};
+const electronReadDir = async () => {
+  if (!electronDirPath.value) {
+    ElMessage.warning('请输入目录路径');
+    return;
+  }
+  electronLoading.value = true;
+  try {
+    if (typeof window !== 'undefined' && window.fileAPI) {
+      const result = await window.fileAPI.readdir(electronDirPath.value);
+      if (result.success) {
+        electronDirContent.value = result.files || [];
+        addLog(`Electron 读取目录成功: ${electronDirPath.value}`, 'success');
+        ElMessage.success(`目录读取成功，共 ${result.files?.length || 0} 个项目`);
+      } else {
+        addLog(`Electron 读取目录失败: ${result.error}`, 'error');
+        ElMessage.error(`读取目录失败: ${result.error}`);
+      }
+    } else {
+      addLog('当前不在 Electron 环境中，无法使用文件 API', 'error');
+      ElMessage.error('当前不在 Electron 环境中');
+    }
+  } catch (error) {
+    addLog(`Electron 读取目录异常: ${error}`, 'error');
+    ElMessage.error('读取目录时发生异常');
+  } finally {
+    electronLoading.value = false;
+  }
+};
+const electronCreateDir = async () => {
+  if (!electronDirPath.value) {
+    ElMessage.warning('请输入目录路径');
+    return;
+  }
+  electronLoading.value = true;
+  try {
+    if (typeof window !== 'undefined' && window.fileAPI) {
+      const result = await window.fileAPI.mkdir(electronDirPath.value);
+      if (result.success) {
+        addLog(`Electron 创建目录成功: ${electronDirPath.value}`, 'success');
+        ElMessage.success('目录创建成功');
+      } else {
+        addLog(`Electron 创建目录失败: ${result.error}`, 'error');
+        ElMessage.error(`创建目录失败: ${result.error}`);
+      }
+    } else {
+      addLog('当前不在 Electron 环境中，无法使用文件 API', 'error');
+      ElMessage.error('当前不在 Electron 环境中');
+    }
+  } catch (error) {
+    addLog(`Electron 创建目录异常: ${error}`, 'error');
+    ElMessage.error('创建目录时发生异常');
+  } finally {
+    electronLoading.value = false;
+  }
 };
 
 // 初始化
