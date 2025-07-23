@@ -107,7 +107,6 @@ export const userMq = {
       ${whereSql}
       ORDER BY u.id DESC
     `;
-    console.log(dbSql);
     const dataParams = [...params, pageSize, offset];
     const res = await mysqlQuery(dbSql, dataParams);
     let userList = Array.isArray(res) ? formatMysqlResult(res) : [];
