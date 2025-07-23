@@ -49,11 +49,6 @@ export const userApi = {
         ]
       });
     });
-    // return request<RoleListData>({
-    //   url: '/user/getAllRoles',
-    //   method: 'get',
-    //   data: _param
-    // });
   },
   postUpdateUser(param: { userId: number; roleId: number }) {
     return request({

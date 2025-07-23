@@ -4,7 +4,6 @@ import * as Project from './types/project';
 export const projectApi = {
   // 不带分页
   getProjectList(projectMember: number) {
-    // console.log(projectMember);
     // return new Promise<{ data: Array<Project.ProjectSelectModel> }>(resolve => {
     //   resolve({
     //     data: [
@@ -109,24 +108,4 @@ export const projectApi = {
       data: param
     });
   },
-  updateProject(param: Project.ProjectModel) {
-    return request({
-      url: '/api/project/updateProject',
-      method: 'post',
-      data: param
-    });
-  },
-  postAddProject(param: Project.ProjectModel) {
-    return request({
-      url: '/api/project/addProject',
-      method: 'post',
-      data: param
-    });
-  },
-  deleteProject(id: string) {
-    return request({
-      url: `/api/project/deleteProject/${id}`,
-      method: 'delete'
-    });
-  }
 };

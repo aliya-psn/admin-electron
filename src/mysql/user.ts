@@ -105,8 +105,9 @@ export const userMq = {
       LEFT JOIN sys_user_role ur ON ur.user_id = u.id
       LEFT JOIN sys_role r ON ur.role_id = r.id
       ${whereSql}
-      LIMIT ? OFFSET ?
+      ORDER BY u.id DESC
     `;
+    console.log(dbSql);
     const dataParams = [...params, pageSize, offset];
     const res = await mysqlQuery(dbSql, dataParams);
     let userList = Array.isArray(res) ? formatMysqlResult(res) : [];
