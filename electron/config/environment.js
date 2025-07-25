@@ -4,10 +4,10 @@ const isDev = process.env.NODE_ENV === 'development';
 // 开发环境配置
 const devConfig = {
   database: {
-    host: 'localhost',
+    host: '192.168.179.129',
     user: 'root',
-    password: 'root',
-    database: 'test'
+    password: 'Swhysc@123456@',
+    database: 'cov-test'
   },
   app: {
     title: 'Swhy-FE (开发环境)',
@@ -37,4 +37,4 @@ export const getEnvironment = () => ({
   isDev,
   isProd: !isDev,
   nodeEnv: process.env.NODE_ENV || 'development'
-}); 
+});

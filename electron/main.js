@@ -20,6 +20,7 @@ import { logger } from './logger.js';
 import { databaseConfig, healthCheckConfig } from './config/database.js';
 import { config } from './config/environment.js';
 import { runAppiumTask } from './appium/runner.js';
+import { takeScreenshot, getScreenshotsList, deleteScreenshot } from './minicap/screenshot.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -582,6 +583,36 @@ ipcMain.handle('run-appium-task', async (event, params) => {
   }
   const result = await runAppiumTask(params, sendProgress);
   return result;
+});
+
+// 截图相关操作
+ipcMain.handle('screenshot-operations', async (event, operation, ...args) => {
+  try {
+    switch (operation) {
+      case 'take-screenshot': {
+        const { deviceId, deviceName, appPackage } = args[0];
+        const log = msg => {
+          event.sender.send('screenshot-progress', msg);
+        };
+        const result = await takeScreenshot(deviceId, deviceName, appPackage, log);
+        return { success: true, data: result };
+      }
+      case 'get-screenshots-list': {
+        const screenshots = getScreenshotsList();
+        return { success: true, data: screenshots };
+      }
+      case 'delete-screenshot': {
+        const { filename } = args[0];
+        const success = deleteScreenshot(filename);
+        return { success, data: { deleted: success } };
+      }
+      default:
+        return { success: false, error: '未知的截图操作' };
+    }
+  } catch (error) {
+    logger.error('截图操作失败:', error);
+    return { success: false, error: error.message };
+  }
 });
 
 app.whenReady().then(() => {

@@ -95,6 +95,21 @@ interface ElectronAppiumAPI {
   onAppiumTaskProgress: (callback: (event: any, msg: string) => void) => void;
 }
 
+interface ScreenshotAPI {
+  takeScreenshot: (params: {
+    deviceId: string;
+    deviceName: string;
+    appPackage: string;
+  }) => Promise<{ success: boolean; data?: any; error?: string }>;
+  getScreenshotsList: () => Promise<{
+    success: boolean;
+    data?: Array<{ filename: string; filePath: string; size: number; createTime: string }>;
+    error?: string;
+  }>;
+  deleteScreenshot: (filename: string) => Promise<{ success: boolean; data?: { deleted: boolean }; error?: string }>;
+  onScreenshotProgress: (callback: (event: any, msg: string) => void) => void;
+}
+
 export interface LoggerAPI {
   log: (...args: any[]) => void;
   error: (...args: any[]) => void;
@@ -113,6 +128,7 @@ declare global {
     cmdAPI: CmdAPI;
     electron: ElectronAPI;
     electronAppiumAPI: ElectronAppiumAPI;
+    screenshotAPI: ScreenshotAPI;
     logger?: LoggerAPI;
   }
 }

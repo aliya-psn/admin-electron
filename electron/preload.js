@@ -142,3 +142,11 @@ contextBridge.exposeInMainWorld('electronAppiumAPI', {
   runAppiumTask: params => ipcRenderer.invoke('run-appium-task', params),
   onAppiumTaskProgress: callback => ipcRenderer.on('appium-task-progress', callback)
 });
+
+// 截图操作 API
+contextBridge.exposeInMainWorld('screenshotAPI', {
+  takeScreenshot: params => ipcRenderer.invoke('screenshot-operations', 'take-screenshot', params),
+  getScreenshotsList: () => ipcRenderer.invoke('screenshot-operations', 'get-screenshots-list'),
+  deleteScreenshot: filename => ipcRenderer.invoke('screenshot-operations', 'delete-screenshot', { filename }),
+  onScreenshotProgress: callback => ipcRenderer.on('screenshot-progress', callback)
+});

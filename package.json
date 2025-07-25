@@ -22,7 +22,10 @@
     "electron:build:mac": "yarn gen:icon && yarn preelectron:build && electron-builder --mac",
     "electron:build:win": "yarn gen:icon && yarn preelectron:build && electron-builder --win",
     "electron:build:linux": "yarn gen:icon && yarn preelectron:build && electron-builder --linux",
-    "gen:icon": "node scripts/gen-icon.js"
+    "gen:icon": "node scripts/gen-icon.js",
+    "minicap:install": "node scripts/download-minicap.js",
+    "minicap:check": "node scripts/download-minicap.js --check",
+    "minicap:test": "node test-minicap.js"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.1",

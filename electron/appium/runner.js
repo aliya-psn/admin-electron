@@ -15,6 +15,124 @@ const APPIUM_URL = `http://localhost:${APPIUM_PORT}`;
 const DEFAULT_TIMEOUT = 10;
 const SERVER_TIMEOUT = 15000;
 
+// 截图相关常量
+const SCREENSHOTS_DIR = path.join(__dirname, '../../screenshots');
+const SCREENSHOT_FORMAT = 'png';
+
+/**
+ * 确保截图目录存在
+ */
+function ensureScreenshotsDir() {
+  if (!fs.existsSync(SCREENSHOTS_DIR)) {
+    fs.mkdirSync(SCREENSHOTS_DIR, { recursive: true });
+  }
+}
+
+/**
+ * 生成截图文件名
+ * @param {string} deviceName 设备名称
+ * @param {string} appPackage 应用包名
+ * @returns {string} 截图文件名
+ */
+function generateScreenshotFilename(deviceName, appPackage) {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+  const safeDeviceName = deviceName.replace(/[^a-zA-Z0-9]/g, '_');
+  const safePackage = appPackage.replace(/[^a-zA-Z0-9]/g, '_');
+  return `${safeDeviceName}_${safePackage}_${timestamp}.${SCREENSHOT_FORMAT}`;
+}
+
+/**
+ * 保存截图到文件
+ * @param {Buffer} screenshotBuffer 截图数据
+ * @param {string} filename 文件名
+ * @returns {string} 保存的文件路径
+ */
+function saveScreenshot(screenshotBuffer, filename) {
+  ensureScreenshotsDir();
+  const filePath = path.join(SCREENSHOTS_DIR, filename);
+  fs.writeFileSync(filePath, screenshotBuffer);
+  return filePath;
+}
+
+/**
+ * 获取设备截图
+ * @param {Object} client WebDriverIO客户端
+ * @param {string} deviceName 设备名称
+ * @param {string} appPackage 应用包名
+ * @param {(msg: string) => void} log 日志函数
+ * @returns {Promise<{success: boolean, filePath?: string, error?: string}>}
+ */
+async function takeScreenshot(client, deviceName, appPackage, log) {
+  try {
+    log('开始获取设备截图...');
+
+    // 使用WebDriverIO的截图API
+    const screenshotBuffer = await client.saveScreenshot();
+
+    if (!screenshotBuffer) {
+      throw new Error('截图数据为空');
+    }
+
+    // 生成文件名并保存
+    const filename = generateScreenshotFilename(deviceName, appPackage);
+    const filePath = saveScreenshot(screenshotBuffer, filename);
+
+    log(`截图保存成功: ${filename}`);
+    return { success: true, filePath, filename };
+  } catch (error) {
+    const errorMsg = `截图失败: ${error.message}`;
+    log(errorMsg);
+    return { success: false, error: errorMsg };
+  }
+}
+
+/**
+ * 获取截图列表
+ * @returns {Array<{filename: string, filePath: string, size: number, createTime: string}>}
+ */
+function getScreenshotsList() {
+  ensureScreenshotsDir();
+
+  try {
+    const files = fs.readdirSync(SCREENSHOTS_DIR);
+    return files
+      .filter(file => file.endsWith(`.${SCREENSHOT_FORMAT}`))
+      .map(file => {
+        const filePath = path.join(SCREENSHOTS_DIR, file);
+        const stats = fs.statSync(filePath);
+        return {
+          filename: file,
+          filePath: filePath,
+          size: stats.size,
+          createTime: stats.birthtime.toISOString()
+        };
+      })
+      .sort((a, b) => new Date(b.createTime) - new Date(a.createTime));
+  } catch (error) {
+    console.error('获取截图列表失败:', error);
+    return [];
+  }
+}
+
+/**
+ * 删除截图文件
+ * @param {string} filename 文件名
+ * @returns {boolean} 是否删除成功
+ */
+function deleteScreenshot(filename) {
+  try {
+    const filePath = path.join(SCREENSHOTS_DIR, filename);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error('删除截图失败:', error);
+    return false;
+  }
+}
+
 /**
  * 获取默认 Android SDK 路径
  */
@@ -216,6 +334,12 @@ export async function runAppiumTask(params, onProgress) {
 
     log('Appium 客户端已连接，开始自动化操作...');
 
+    // 执行截图操作
+    const screenshotResult = await takeScreenshot(client, params.deviceName, params.package, log);
+    if (screenshotResult.success) {
+      log(`截图已保存到: ${screenshotResult.filePath}`);
+    }
+
     // TODO: 在这里添加具体的自动化操作逻辑
     // const el = await client.$('~your_selector');
     // await el.click();
@@ -224,7 +348,7 @@ export async function runAppiumTask(params, onProgress) {
     log('自动化操作完成，关闭会话...');
     await client.deleteSession();
     log('任务完成');
-    return { success: true, logs };
+    return { success: true, logs, screenshot: screenshotResult };
   } catch (err) {
     log('自动化执行失败: ' + (err?.message || err));
     console.log('[runAppiumTask] 自动化执行异常:', err);
@@ -232,3 +356,6 @@ export async function runAppiumTask(params, onProgress) {
     return { success: false, logs };
   }
 }
+
+// 导出截图相关函数
+export { takeScreenshot, getScreenshotsList, deleteScreenshot };

@@ -29,9 +29,48 @@
             <div>节点数：{{ nodes.length }} 边数：{{ edges.length }}</div>
           </el-card>
           <el-card class="panel device-img">
-            <template #header>设备镜像</template>
-            <div class="show-img">
-              <img src="/images/file_1.png" alt="设备截图" />
+            <template #header>
+              <div class="device-img-header">
+                <span>设备镜像</span>
+                <div class="screenshot-controls">
+                  <el-button size="small" type="primary" @click="takeScreenshot" :loading="screenshotLoading">
+                    <el-icon><Camera /></el-icon>
+                    截图
+                  </el-button>
+                  <el-button size="small" @click="refreshScreenshots">
+                    <el-icon><Refresh /></el-icon>
+                    刷新
+                  </el-button>
+                </div>
+              </div>
+            </template>
+            <div class="screenshot-container">
+              <div v-if="currentScreenshot" class="current-screenshot">
+                <img :src="currentScreenshot" alt="当前设备截图" />
+                <div class="screenshot-info">
+                  <span>最新截图: {{ formatTime(screenshotInfo?.createTime) }}</span>
+                </div>
+              </div>
+              <div v-else class="no-screenshot">
+                <el-empty description="暂无截图" />
+              </div>
+            </div>
+            <div class="screenshots-list">
+              <div class="list-header">
+                <span>截图历史</span>
+                <el-button size="small" text @click="showScreenshotsDialog = true"> 查看全部 </el-button>
+              </div>
+              <div class="screenshots-grid">
+                <div
+                  v-for="screenshot in recentScreenshots"
+                  :key="screenshot.filename"
+                  class="screenshot-item"
+                  @click="selectScreenshot(screenshot)"
+                >
+                  <img :src="`file://${screenshot.filePath}`" :alt="screenshot.filename" />
+                  <div class="screenshot-name">{{ screenshot.filename }}</div>
+                </div>
+              </div>
             </div>
           </el-card>
         </div>
@@ -99,12 +138,84 @@
         <el-button @click="showNodeDetail = false">关闭</el-button>
       </template>
     </el-dialog>
+
+    <!-- 截图管理对话框 -->
+    <el-dialog v-model="showScreenshotsDialog" title="截图管理" width="80%">
+      <div class="screenshots-dialog-content">
+        <div class="screenshots-toolbar">
+          <el-button type="primary" @click="takeScreenshot" :loading="screenshotLoading">
+            <el-icon><Camera /></el-icon>
+            新截图
+          </el-button>
+          <el-button @click="refreshScreenshots">
+            <el-icon><Refresh /></el-icon>
+            刷新列表
+          </el-button>
+          <el-button type="danger" @click="deleteSelectedScreenshots" :disabled="selectedScreenshots.length === 0">
+            <el-icon><Delete /></el-icon>
+            删除选中
+          </el-button>
+        </div>
+
+        <el-table :data="allScreenshots" @selection-change="handleScreenshotSelection" style="width: 100%">
+          <el-table-column type="selection" width="55" />
+          <el-table-column label="预览" width="120">
+            <template #default="{ row }">
+              <img
+                :src="`file://${row.filePath}`"
+                :alt="row.filename"
+                style="width: 80px; height: 60px; object-fit: cover"
+              />
+            </template>
+          </el-table-column>
+          <el-table-column prop="filename" label="文件名" />
+          <el-table-column prop="size" label="大小" width="100">
+            <template #default="{ row }">
+              {{ formatFileSize(row.size) }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="createTime" label="创建时间" width="180">
+            <template #default="{ row }">
+              {{ formatTime(row.createTime) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="150">
+            <template #default="{ row }">
+              <el-button size="small" @click="viewScreenshot(row)">查看</el-button>
+              <el-button size="small" type="danger" @click="deleteScreenshot(row.filename)">删除</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+
+      <template #footer>
+        <el-button @click="showScreenshotsDialog = false">关闭</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 截图查看对话框 -->
+    <el-dialog v-model="showScreenshotViewer" title="截图查看" width="60%">
+      <div v-if="viewingScreenshot" class="screenshot-viewer">
+        <img :src="`file://${viewingScreenshot.filePath}`" :alt="viewingScreenshot.filename" style="max-width: 100%" />
+        <div class="screenshot-details">
+          <p><strong>文件名:</strong> {{ viewingScreenshot.filename }}</p>
+          <p><strong>大小:</strong> {{ formatFileSize(viewingScreenshot.size) }}</p>
+          <p><strong>创建时间:</strong> {{ formatTime(viewingScreenshot.createTime) }}</p>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="showScreenshotViewer = false">关闭</el-button>
+        <el-button type="primary" @click="downloadScreenshot">下载</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { ElMessage } from 'element-plus';
+import { Camera, Refresh, Delete } from '@element-plus/icons-vue';
 import PathMap from '@/components/PathMap/PathMap.vue';
 
 const progress = ref({ current: 25, total: 30, percent: 80 });
@@ -187,6 +298,163 @@ function onNodeClick(nodeId: number | string) {
     showNodeDetail.value = true;
   }
 }
+
+// 截图相关状态
+const screenshotLoading = ref(false);
+const currentScreenshot = ref<string>('');
+const screenshotInfo = ref<any>(null);
+const recentScreenshots = ref<any[]>([]);
+const allScreenshots = ref<any[]>([]);
+const selectedScreenshots = ref<any[]>([]);
+const showScreenshotsDialog = ref(false);
+const showScreenshotViewer = ref(false);
+const viewingScreenshot = ref<any>(null);
+
+// 获取当前任务信息
+const getCurrentTaskInfo = () => {
+  try {
+    const taskInfoStr = localStorage.getItem('currentTaskInfo');
+    return taskInfoStr ? JSON.parse(taskInfoStr) : null;
+  } catch (error) {
+    console.error('获取任务信息失败:', error);
+    return null;
+  }
+};
+
+// 截图相关方法
+const takeScreenshot = async () => {
+  try {
+    screenshotLoading.value = true;
+
+    // 从localStorage获取任务信息
+    const taskInfo = getCurrentTaskInfo();
+    if (!taskInfo) {
+      ElMessage.error('未找到任务信息，请重新创建任务');
+      return;
+    }
+
+    // 获取设备ID
+    const deviceId = taskInfo.deviceId;
+    if (!deviceId) {
+      ElMessage.error('未找到设备ID，请重新创建任务');
+      return;
+    }
+
+    const result = await window.screenshotAPI?.takeScreenshot({
+      deviceId: deviceId,
+      deviceName: taskInfo.deviceName,
+      appPackage: taskInfo.appPackage
+    });
+
+    if (result?.success) {
+      ElMessage.success('截图成功');
+      await refreshScreenshots();
+    } else {
+      ElMessage.error(result?.error || '截图失败');
+    }
+  } catch (error) {
+    ElMessage.error('截图操作异常: ' + error);
+  } finally {
+    screenshotLoading.value = false;
+  }
+};
+
+const refreshScreenshots = async () => {
+  try {
+    const result = await window.screenshotAPI?.getScreenshotsList();
+    if (result?.success && result.data) {
+      allScreenshots.value = result.data;
+      recentScreenshots.value = result.data.slice(0, 6); // 显示最近6张截图
+
+      // 更新当前显示的截图
+      if (recentScreenshots.value.length > 0) {
+        const latest = recentScreenshots.value[0];
+        currentScreenshot.value = `file://${latest.filePath}`;
+        screenshotInfo.value = latest;
+      }
+    }
+  } catch (error) {
+    ElMessage.error('获取截图列表失败: ' + error);
+  }
+};
+
+const selectScreenshot = (screenshot: any) => {
+  currentScreenshot.value = `file://${screenshot.filePath}`;
+  screenshotInfo.value = screenshot;
+};
+
+const viewScreenshot = (screenshot: any) => {
+  viewingScreenshot.value = screenshot;
+  showScreenshotViewer.value = true;
+};
+
+const deleteScreenshot = async (filename: string) => {
+  try {
+    const result = await window.screenshotAPI?.deleteScreenshot(filename);
+    if (result?.success) {
+      ElMessage.success('删除成功');
+      await refreshScreenshots();
+    } else {
+      ElMessage.error(result?.error || '删除失败');
+    }
+  } catch (error) {
+    ElMessage.error('删除截图失败: ' + error);
+  }
+};
+
+const deleteSelectedScreenshots = async () => {
+  try {
+    for (const screenshot of selectedScreenshots.value) {
+      await deleteScreenshot(screenshot.filename);
+    }
+    selectedScreenshots.value = [];
+  } catch (error) {
+    ElMessage.error('批量删除失败: ' + error);
+  }
+};
+
+const handleScreenshotSelection = (selection: any[]) => {
+  selectedScreenshots.value = selection;
+};
+
+const downloadScreenshot = () => {
+  if (viewingScreenshot.value) {
+    const link = document.createElement('a');
+    link.href = `file://${viewingScreenshot.value.filePath}`;
+    link.download = viewingScreenshot.value.filename;
+    link.click();
+  }
+};
+
+// 工具函数
+const formatTime = (timeStr: string) => {
+  if (!timeStr) return '';
+  const date = new Date(timeStr);
+  return date.toLocaleString();
+};
+
+const formatFileSize = (bytes: number) => {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
+// 页面加载时获取截图列表
+onMounted(() => {
+  window.electronAppiumAPI?.onAppiumTaskProgress?.((event, msg: string) => {
+    logs.value.push(msg);
+  });
+
+  // 监听截图进度
+  window.screenshotAPI?.onScreenshotProgress?.((event, msg: string) => {
+    logs.value.push(`[截图] ${msg}`);
+  });
+
+  // 初始化截图列表
+  refreshScreenshots();
+});
 
 function stopTask() {
   // mock 停止
@@ -436,6 +704,125 @@ function goReport() {
       &:hover {
         background: #a8a8a8;
       }
+    }
+  }
+}
+
+// 截图相关样式
+.device-img-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.screenshot-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.screenshot-container {
+  margin-bottom: 16px;
+
+  .current-screenshot {
+    position: relative;
+
+    img {
+      width: 100%;
+      max-height: 300px;
+      object-fit: contain;
+      border-radius: 8px;
+      border: 1px solid #e4e7ed;
+    }
+
+    .screenshot-info {
+      position: absolute;
+      bottom: 8px;
+      left: 8px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+  }
+
+  .no-screenshot {
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.screenshots-list {
+  .list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .screenshots-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 8px;
+
+    .screenshot-item {
+      cursor: pointer;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 2px solid transparent;
+      transition: border-color 0.2s;
+
+      &:hover {
+        border-color: #409eff;
+      }
+
+      img {
+        width: 100%;
+        height: 60px;
+        object-fit: cover;
+      }
+
+      .screenshot-name {
+        font-size: 10px;
+        padding: 4px;
+        background: #f5f7fa;
+        text-align: center;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+  }
+}
+
+.screenshots-dialog-content {
+  .screenshots-toolbar {
+    margin-bottom: 16px;
+    display: flex;
+    gap: 8px;
+  }
+}
+
+.screenshot-viewer {
+  text-align: center;
+
+  img {
+    max-width: 100%;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .screenshot-details {
+    margin-top: 16px;
+    text-align: left;
+
+    p {
+      margin: 8px 0;
+      color: #606266;
     }
   }
 }

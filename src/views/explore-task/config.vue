@@ -1014,6 +1014,18 @@ async function submitForm() {
         bundleId: app?.package // iOS
       };
 
+      // 存储任务信息到localStorage，供执行页面使用
+      const taskInfo = {
+        deviceId: device?.id || '',
+        deviceName: device?.name || '',
+        appPackage: app?.package || '',
+        platform: device?.platform || 'android',
+        taskName: form.value.taskName,
+        duration: form.value.duration,
+        interval: form.value.interval
+      };
+      localStorage.setItem('currentTaskInfo', JSON.stringify(taskInfo));
+
       router.push('/explore-task/execute');
 
       // 调用主进程 Appium 任务
