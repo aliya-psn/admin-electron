@@ -52,6 +52,7 @@
     "vue-router": "4.3.0",
     "wait-on": "^8.0.3",
     "webdriverio": "^9.17.0",
+    "ws": "^8.18.3",
     "xe-utils": "3.5.22"
   },
   "devDependencies": {

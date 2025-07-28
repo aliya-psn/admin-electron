@@ -145,6 +145,22 @@ export const dynamicRoutes: RouteRecordRaw[] = [
         }
       }
     ]
+  },
+  {
+    path: '/socket',
+    component: Layouts,
+    children: [
+      {
+        name: 'system-features',
+        path: 'index',
+        component: () => import('@/views/explore-task/stream-image.vue'),
+        meta: {
+          title: 'socket',
+          svgIcon: 'info',
+          keepAlive: true
+        }
+      }
+    ]
   }
 ];
 

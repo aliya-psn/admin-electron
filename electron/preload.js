@@ -142,3 +142,52 @@ contextBridge.exposeInMainWorld('electronAppiumAPI', {
   runAppiumTask: params => ipcRenderer.invoke('run-appium-task', params),
   onAppiumTaskProgress: callback => ipcRenderer.on('appium-task-progress', callback)
 });
+
+// 暴露 WebSocket 图片流 API
+contextBridge.exposeInMainWorld('socketStreamAPI', {
+  /**
+   * 启动 WebSocket 图片流
+   * @param {string} url - WebSocket 服务地址，如 ws://localhost:9002
+   * @param {(blob: Blob) => void} cb - 每收到一帧图片时的回调，参数为图片 Blob
+   * @returns {WebSocket} - 返回 WebSocket 实例，可用于关闭连接
+   */
+  start: (url, cb) => {
+    const ws = new WebSocket(url);
+    ws.binaryType = 'blob';
+    ws.onmessage = event => {
+      cb(event.data); // Blob
+    };
+    return ws;
+  }
+});
+
+// 暴露 minicap 截图流 API
+contextBridge.exposeInMainWorld('minicapAPI', {
+  /**
+   * 监听 minicap 截图帧
+   * @param {(buf: ArrayBuffer) => void} cb - 每收到一帧图片时的回调，参数为图片 buffer
+   */
+  onFrame: cb => {
+    ipcRenderer.on('minicap-frame', (event, buffer) => {
+      cb(buffer);
+    });
+  },
+  /**
+   * 监听 minicap 错误
+   * @param {(msg: string) => void} cb - 发生错误时的回调
+   */
+  onError: cb => {
+    ipcRenderer.on('minicap-error', (event, msg) => {
+      cb(msg);
+    });
+  },
+  /**
+   * 监听 minicap 关闭
+   * @param {(msg: string) => void} cb - 连接关闭时的回调
+   */
+  onClosed: cb => {
+    ipcRenderer.on('minicap-closed', (event, msg) => {
+      cb(msg);
+    });
+  }
+});

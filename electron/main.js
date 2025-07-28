@@ -20,6 +20,7 @@ import { logger } from './logger.js';
 import { databaseConfig, healthCheckConfig } from './config/database.js';
 import { config } from './config/environment.js';
 import { runAppiumTask } from './appium/runner.js';
+import net from 'net';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -584,8 +585,66 @@ ipcMain.handle('run-appium-task', async (event, params) => {
   return result;
 });
 
-app.whenReady().then(() => {
-  createWindow();
+function startMinicapStream(win) {
+  const client = net.connect({ port: 9002 }, () => {
+    logger.log('已连接到 minicap');
+  });
+
+  let buffer = Buffer.alloc(0);
+  let readBannerBytes = 0;
+  const bannerLength = 2 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 1 + 1;
+  let readFrameBytes = 0;
+  let frameBodyLength = 0;
+
+  client.on('data', data => {
+    buffer = Buffer.concat([buffer, data]);
+    for (;;) {
+      if (readBannerBytes < bannerLength) {
+        if (buffer.length >= bannerLength) {
+          console.log('等待banner');
+          buffer = buffer.slice(bannerLength);
+          readBannerBytes = bannerLength;
+        } else {
+          break;
+        }
+      } else if (readFrameBytes < 4) {
+        console.log('等待帧长度');
+        if (buffer.length >= 4) {
+          frameBodyLength = buffer.readUInt32LE(0);
+          buffer = buffer.slice(4);
+          readFrameBytes = 4;
+        } else {
+          break;
+        }
+      } else {
+        console.log('等待帧内容', frameBodyLength, buffer.length);
+        if (buffer.length >= frameBodyLength) {
+          const frameBody = buffer.slice(0, frameBodyLength);
+          win.webContents.send('minicap-frame', frameBody);
+          buffer = buffer.slice(frameBodyLength);
+          readFrameBytes = 0;
+          frameBodyLength = 0;
+        } else {
+          break;
+        }
+      }
+    }
+  });
+
+  client.on('close', () => {
+    console.log('minicap 连接已关闭');
+    win.webContents.send('minicap-closed', 'minicap 连接已关闭');
+  });
+  client.on('error', err => {
+    console.error('minicap 连接错误:', err);
+    win.webContents.send('minicap-error', 'minicap 连接错误: ' + err.message);
+  });
+}
+
+// 在 app ready 后创建窗口并启动 minicap 流
+app.whenReady().then(async () => {
+  await createWindow();
+  startMinicapStream(mainWindow);
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
