@@ -646,13 +646,11 @@ function startMinicapStream(win, port = 9002) {
     });
 
     minicapClient.on('close', () => {
-      console.log('minicap 连接已关闭');
       win.webContents.send('minicap-closed', 'minicap 连接已关闭');
       minicapClient = null;
     });
 
     minicapClient.on('error', err => {
-      console.error('minicap 连接错误:', err);
       win.webContents.send('minicap-error', 'minicap 连接错误: ' + err.message);
       minicapClient = null;
       reject(err);

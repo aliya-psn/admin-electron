@@ -99,6 +99,7 @@ const connectToStream = async () => {
     if (result.success) {
       isConnected.value = true;
       connectionStatus.value = '连接成功';
+      console.log('minicap 连接成功');
 
       // 设置监听器
       setupListeners();
@@ -167,7 +168,7 @@ const setupListeners = () => {
   _closedListener = window.minicapAPI.onClosed((msg: string) => {
     isConnected.value = false;
     connectionStatus.value = `连接关闭: ${msg}`;
-    console.log('minicap 连接关闭:', msg);
+    console.log('minicap:', msg);
   });
 };
 
