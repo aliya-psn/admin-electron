@@ -585,66 +585,111 @@ ipcMain.handle('run-appium-task', async (event, params) => {
   return result;
 });
 
-function startMinicapStream(win) {
-  const client = net.connect({ port: 9002 }, () => {
-    logger.log('已连接到 minicap');
-  });
+// 全局变量存储 minicap 连接
+let minicapClient = null;
+let minicapBuffer = Buffer.alloc(0);
+let minicapReadBannerBytes = 0;
+const minicapBannerLength = 32;
+let minicapReadFrameBytes = 0;
+let minicapFrameBodyLength = 0;
 
-  let buffer = Buffer.alloc(0);
-  let readBannerBytes = 0;
-  const bannerLength = 2 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 1 + 1;
-  let readFrameBytes = 0;
-  let frameBodyLength = 0;
+function startMinicapStream(win, port = 9002) {
+  return new Promise((resolve, reject) => {
+    if (minicapClient) {
+      minicapClient.destroy();
+    }
 
-  client.on('data', data => {
-    buffer = Buffer.concat([buffer, data]);
-    for (;;) {
-      if (readBannerBytes < bannerLength) {
-        if (buffer.length >= bannerLength) {
-          console.log('等待banner');
-          buffer = buffer.slice(bannerLength);
-          readBannerBytes = bannerLength;
+    minicapClient = net.connect({ port }, () => {
+      logger.log(`已连接到 minicap (端口: ${port})`);
+      resolve();
+    });
+
+    // 重置状态
+    minicapBuffer = Buffer.alloc(0);
+    minicapReadBannerBytes = 0;
+    minicapReadFrameBytes = 0;
+    minicapFrameBodyLength = 0;
+
+    minicapClient.on('data', data => {
+      minicapBuffer = Buffer.concat([minicapBuffer, data]);
+      for (;;) {
+        if (minicapReadBannerBytes < minicapBannerLength) {
+          if (minicapBuffer.length >= minicapBannerLength) {
+            console.log('等待banner');
+            minicapBuffer = minicapBuffer.slice(minicapBannerLength);
+            minicapReadBannerBytes = minicapBannerLength;
+          } else {
+            break;
+          }
+        } else if (minicapReadFrameBytes < 4) {
+          console.log('等待帧长度');
+          if (minicapBuffer.length >= 4) {
+            minicapFrameBodyLength = minicapBuffer.readUInt32LE(0);
+            minicapBuffer = minicapBuffer.slice(4);
+            minicapReadFrameBytes = 4;
+          } else {
+            break;
+          }
         } else {
-          break;
-        }
-      } else if (readFrameBytes < 4) {
-        console.log('等待帧长度');
-        if (buffer.length >= 4) {
-          frameBodyLength = buffer.readUInt32LE(0);
-          buffer = buffer.slice(4);
-          readFrameBytes = 4;
-        } else {
-          break;
-        }
-      } else {
-        console.log('等待帧内容', frameBodyLength, buffer.length);
-        if (buffer.length >= frameBodyLength) {
-          const frameBody = buffer.slice(0, frameBodyLength);
-          win.webContents.send('minicap-frame', frameBody);
-          buffer = buffer.slice(frameBodyLength);
-          readFrameBytes = 0;
-          frameBodyLength = 0;
-        } else {
-          break;
+          console.log('等待帧内容', minicapFrameBodyLength, minicapBuffer.length);
+          if (minicapBuffer.length >= minicapFrameBodyLength) {
+            const frameBody = minicapBuffer.slice(0, minicapFrameBodyLength);
+            win.webContents.send('minicap-frame', frameBody);
+            minicapBuffer = minicapBuffer.slice(minicapFrameBodyLength);
+            minicapReadFrameBytes = 0;
+            minicapFrameBodyLength = 0;
+          } else {
+            break;
+          }
         }
       }
-    }
-  });
+    });
 
-  client.on('close', () => {
-    console.log('minicap 连接已关闭');
-    win.webContents.send('minicap-closed', 'minicap 连接已关闭');
-  });
-  client.on('error', err => {
-    console.error('minicap 连接错误:', err);
-    win.webContents.send('minicap-error', 'minicap 连接错误: ' + err.message);
+    minicapClient.on('close', () => {
+      console.log('minicap 连接已关闭');
+      win.webContents.send('minicap-closed', 'minicap 连接已关闭');
+      minicapClient = null;
+    });
+
+    minicapClient.on('error', err => {
+      console.error('minicap 连接错误:', err);
+      win.webContents.send('minicap-error', 'minicap 连接错误: ' + err.message);
+      minicapClient = null;
+      reject(err);
+    });
   });
 }
 
-// 在 app ready 后创建窗口并启动 minicap 流
+function stopMinicapStream() {
+  if (minicapClient) {
+    minicapClient.destroy();
+    minicapClient = null;
+    console.log('minicap 连接已手动断开');
+  }
+}
+
+// 添加 minicap 连接相关的 IPC 处理器
+ipcMain.handle('connect-minicap', async (event, port) => {
+  try {
+    await startMinicapStream(mainWindow, port);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('disconnect-minicap', async _event => {
+  try {
+    stopMinicapStream();
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// 在 app ready 后创建窗口（不自动启动 minicap 流）
 app.whenReady().then(async () => {
   await createWindow();
-  startMinicapStream(mainWindow);
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

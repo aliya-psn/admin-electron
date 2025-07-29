@@ -164,6 +164,19 @@ contextBridge.exposeInMainWorld('socketStreamAPI', {
 // 暴露 minicap 截图流 API
 contextBridge.exposeInMainWorld('minicapAPI', {
   /**
+   * 连接到 minicap 服务
+   * @param {number} port - 端口号
+   * @returns {Promise<{success: boolean, error?: string}>}
+   */
+  connect: port => ipcRenderer.invoke('connect-minicap', port),
+
+  /**
+   * 断开 minicap 连接
+   * @returns {Promise<{success: boolean, error?: string}>}
+   */
+  disconnect: () => ipcRenderer.invoke('disconnect-minicap'),
+
+  /**
    * 监听 minicap 截图帧
    * @param {(buf: ArrayBuffer) => void} cb - 每收到一帧图片时的回调，参数为图片 buffer
    */
